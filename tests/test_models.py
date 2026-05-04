@@ -7,6 +7,9 @@ from sqlalchemy.exc import IntegrityError
 from app.models import (
     Transaction,
 )
+from tests.conftest import requires_db
+
+pytestmark = requires_db
 
 EXPECTED_TABLES = {
     "config",

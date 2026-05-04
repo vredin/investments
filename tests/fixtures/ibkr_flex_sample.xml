@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FlexQueryResponse queryName="Activity" type="AF">
+  <FlexStatements count="1">
+    <FlexStatement accountId="U1234567" fromDate="2024-01-01" toDate="2024-01-31">
+      <OpenPositions>
+        <OpenPosition
+          accountId="U1234567"
+          currency="USD"
+          assetCategory="STK"
+          symbol="AAPL"
+          description="APPLE INC"
+          position="10"
+          markPrice="183.92"
+          positionValue="1839.20"
+          costBasisMoney="1500.00"
+          costBasisPrice="150.00"
+          reportDate="2024-01-31"
+          levelOfDetail="LOT"
+        />
+        <OpenPosition
+          accountId="U1234567"
+          currency="USD"
+          assetCategory="STK"
+          symbol="MSFT"
+          description="MICROSOFT CORP"
+          position="5"
+          markPrice="375.00"
+          positionValue="1875.00"
+          costBasisMoney="1600.00"
+          costBasisPrice="320.00"
+          reportDate="2024-01-31"
+          levelOfDetail="LOT"
+        />
+      </OpenPositions>
+      <Trades>
+        <Trade
+          accountId="U1234567"
+          currency="USD"
+          assetCategory="STK"
+          symbol="TSLA"
+          description="TESLA INC"
+          tradeID="111111111"
+          tradeDate="2024-01-10"
+          quantity="5"
+          tradePrice="230.50"
+          tradeMoney="1152.50"
+          ibCommission="-1.00"
+          buySell="BUY"
+          levelOfDetail="EXECUTION"
+        />
+        <Trade
+          accountId="U1234567"
+          currency="USD"
+          assetCategory="STK"
+          symbol="AAPL"
+          description="APPLE INC"
+          tradeID="222222222"
+          tradeDate="2024-01-15"
+          quantity="10"
+          tradePrice="150.00"
+          tradeMoney="1500.00"
+          ibCommission="-1.50"
+          buySell="BUY"
+          levelOfDetail="EXECUTION"
+        />
+        <Trade
+          accountId="U1234567"
+          currency="USD"
+          assetCategory="STK"
+          symbol="MSFT"
+          description="MICROSOFT CORP"
+          tradeID="333333333"
+          tradeDate="2024-01-20"
+          quantity="5"
+          tradePrice="320.00"
+          tradeMoney="1600.00"
+          ibCommission="-1.20"
+          buySell="BUY"
+          levelOfDetail="EXECUTION"
+        />
+      </Trades>
+    </FlexStatement>
+  </FlexStatements>
+</FlexQueryResponse>

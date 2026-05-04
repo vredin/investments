@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Sync IBKR — Investment Assistant{% endblock %}
+
+{% block content %}
+<h2 style="margin-bottom: 1.5rem;">Sync IBKR Positions &amp; Transactions</h2>
+
+<div style="background: #fff; padding: 1.5rem; border-radius: 8px; max-width: 560px;">
+  <p style="margin-bottom: 1rem; font-size: 0.9rem; color: #555;">
+    Download an <strong>Activity Statement</strong> from the IBKR Portal in
+    <strong>XML format</strong>. Include <em>Open Positions</em> and <em>Trades</em>
+    sections. Then upload the file below.
+  </p>
+
+  <form method="POST" action="/sync/ibkr" enctype="multipart/form-data">
+    <div style="margin-bottom: 1rem;">
+      <label for="file" style="display: block; font-size: 0.9rem; font-weight: 500; margin-bottom: 0.4rem;">
+        Activity Statement (.xml)
+      </label>
+      <input
+        type="file"
+        id="file"
+        name="file"
+        accept=".xml,application/xml,text/xml"
+        required
+        style="font-size: 0.9rem;"
+      />
+    </div>
+    <button
+      type="submit"
+      style="background: #1a1a2e; color: #fff; border: none; padding: 0.5rem 1.25rem; border-radius: 4px; cursor: pointer; font-size: 0.9rem;"
+    >
+      Upload &amp; Sync
+    </button>
+  </form>
+</div>
+{% endblock %}

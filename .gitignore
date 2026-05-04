@@ -50,5 +50,5 @@ postgres_data/
 ChatExport*/
 Course/
 
-# Old specs dir (superseded by .spec_system/)
-specs/
+# Old specs dir at repo root (superseded by .spec_system/)
+/specs/
