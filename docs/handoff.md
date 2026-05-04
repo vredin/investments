@@ -1,39 +1,37 @@
 # Session Handoff — 2026-05-04
 
 ## Completed This Session
+- phase01-session01-broker-sync: всі 21 задач виконані (коміт 45859bb)
+  - broker.py: PositionRow/TransactionRow DTOs, upsert з ON CONFLICT DO UPDATE
+  - ibkr.py: parse_flex_xml, import_flex_xml, sync_ibkr_positions → BrokerSyncError
+  - freedom.py: прямий HTTP + HMAC-SHA256 (tradernet SDK порожній), 30s timeout, 2 retry
+  - sync.py: GET/POST /sync/ibkr, POST /sync/freedom з flash messages
+  - sync_ibkr.html, base.html nav links, 38 unit тестів, fixture XML
+  - Задеплоєно на VPS (money.semishan.pro), app running
 
-- Phase 00 Session 01 (`phase00-session01-skeleton`) — все 22 задачи реализованы и задеплоены
-  - FastAPI skeleton с авторизацией (itsdangerous `auth_token` cookie)
-  - PostgreSQL + pgvector схема, 10 моделей SQLAlchemy, Alembic миграции
-  - APScheduler 3 cron-задачи в lifespan
-  - Jinja2 шаблоны (base/login/dashboard)
-  - Docker Compose + Dockerfile (CPU-only torch), Traefik на сети `proxy`
-  - Деплой на `vps3` `/opt/Investments`, домен `money.semishan.pro`
-  - Установлен claude-project-template (без конфликтов команд)
-  - `git init`, initial commit `b860cc0` (152 файла)
-  - `state.json` обновлён: session помечена `completed`, phase 0 → `in_progress`
-  - Коммит `db0a34b` — закрытие сессии
-
-## In Progress (not finished)
-
-- Нет незавершённых задач
+## In Progress (не завершено)
+- **КРИТИЧНА ПРОБЛЕМА**: ADMIN_PASSWORD_HASH на VPS = фейковий тестовий хеш
+  - При `scp .env vps3:/opt/Investments/.env` я перезаписав реальний .env на сервері
+  - Локальний .env (який пішов на сервер) мав `$2b$12$dummyhashforlocaltesting...`
+  - Зараз **логін на money.semishan.pro НЕ ПРАЦЮЄ**
+  - Freedom Finance ключі є в локальному .env але не перевірялись
 
 ## Next Session Should
-
-1. Запустить `/plansession` — спланировать Phase 01 (Data Ingestion): IBKR flex-report import, Freedom Finance API, цены через yfinance
-2. Заполнить `.env` на сервере: `OPENROUTER_API_KEY`, `FREEDOM_PRIVATE_KEY`, `FREEDOM_LOGIN`, `FREEDOM_PASSWORD`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` (напомнить пользователю)
-3. Настроить GitHub remote и запушить репо (пользователь не запрашивал явно, но логично)
+1. **ПЕРШОЧЕРГОВО** — відновити ADMIN_PASSWORD_HASH:
+   - Дізнатись admin пароль у юзера
+   - `python -c "import bcrypt; print(bcrypt.hashpw(b'ПАРОЛЬ', bcrypt.gensalt()).decode())"`
+   - `ssh vps3 "nano /opt/Investments/.env"` — вставити справжній хеш
+   - `ssh vps3 "cd /opt/Investments && docker compose restart app"`
+   - Перевірити логін на money.semishan.pro
+2. Перевірити Freedom Finance: після логіну → "Sync Freedom" → flash з кількістю або clear BrokerSyncError (не 500)
+3. Завантажити реальний IBKR Flex XML: Activity Statement з IBKR Portal → /sync/ibkr → перевірити DB
 
 ## Context That Would Be Lost
-
-- Cookie-конфликт: auth = `auth_token` (itsdangerous), сессии flash = `session` (SessionMiddleware) — РАЗНЫЕ имена, иначе `binascii.Error: Invalid base64-encoded string`
-- Starlette 1.0 breaking change: `TemplateResponse(request, name, context)` — без именованных kwargs
-- Docker: CPU-only torch нужно ставить ПЕРВЫМ шагом (`--index-url https://download.pytorch.org/whl/cpu`), иначе тянет 2GB CUDA
-- Traefik сеть на сервере: `proxy` (не `traefik`)
-- OpenRouter: используем `openai` SDK с `base_url="https://openrouter.ai/api/v1"` и `OPENROUTER_API_KEY`
-- hatchling требует `[tool.hatch.build.targets.wheel] packages = ["app"]` — иначе `Unable to determine which files to ship`
-- SSH: только `ssh vps3`, порт 22, IP 89.167.124.165
+- tradernet 0.1.3 має НЕ importable source — тільки dist-info. Freedom адаптер = прямі HTTP requests з HMAC-SHA256. Методи API: `getPortfolio`, `getTransactionHistory` — можуть потребувати уточнення.
+- Position PK = (snapshot_date, ticker), upsert по ньому. В spec було написано (instrument_id, broker) — це неправильно, модель така.
+- uv pip install pytest потрібен окремо бо `uv sync --dev` не ставить pytest в venv локально (баг в конфігурації проекту).
+- .gitignore мав `specs/` (без /) — виправлено на `/specs/` щоб не блокувати .spec_system/specs/
+- `docker compose exec app uv run python` створює новий venv в контейнері — краще `docker compose exec app python`
 
 ## User's Last Unanswered Question
-
-- Нет — последний запрос пользователя ("заполни gitignore, инициализируй git, добавь туда файлы") выполнен полностью.
+Я запитав: "Який варіант відновити ADMIN_PASSWORD_HASH: (1) згенерувати новий з паролю або (2) знайти старий?" — відповідь НЕ ОТРИМАНА. Почни наступну сесію з цього питання.
