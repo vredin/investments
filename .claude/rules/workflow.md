@@ -314,6 +314,45 @@ Before any deploy action — **read `docs/DEPLOY.md` first**. All server config 
 - Never store secrets in `docs/` or memory files
 - If `.env.production` doesn't exist — create it from `.env.example` and ask user to fill in values ONCE
 
+### CRITICAL: .env Delivery Rules (learned the hard way — 2026-05-04)
+
+**Rule 1 — NEVER `scp` the whole local `.env` to the server.**
+The local `.env` is for local dev and may have test/dummy values (e.g. `ADMIN_PASSWORD_HASH=$2b$12$dummyhash...`). `scp .env vps3:/opt/.../.env` silently overwrites real production values with local test data.
+
+To update a specific key on the server, use a Python heredoc over SSH — never shell echo/sed:
+```bash
+ssh vps3 python3 << 'PYEOF'
+import re
+path = '/opt/Investments/.env'
+new_val = 'THE_ACTUAL_VALUE_WITH_$_SIGNS'
+with open(path, 'r') as f:
+    content = f.read()
+content = re.sub(r'^KEY_NAME=.*$', 'KEY_NAME=' + new_val, content, flags=re.MULTILINE)
+with open(path, 'w') as f:
+    f.write(content)
+PYEOF
+```
+
+**Rule 2 — Secrets containing `$` MUST be written via Python, never via shell.**
+`echo`, `sed`, and docker-compose `env_file:` ALL expand `$VAR` patterns. Bcrypt hashes (`$2b$12$...`), some API keys, and any value with `$` will be silently corrupted.
+
+- `echo 'KEY=$2b$12$...' >> .env` — safe locally (single quotes), but shell injection risk in other contexts
+- `docker-compose env_file: .env` — **ALWAYS corrupts bcrypt hashes** (expands `$2b`, `$XXXX` as variables)
+- **Safe method**: volume-mount `.env` into container (`- ./.env:/app/.env:ro`) so pydantic-settings reads the raw file directly without docker-compose interpolation
+
+**Rule 3 — docker-compose `env_file:` is banned for apps that use bcrypt or any secret with `$`.**
+Use volume mount instead:
+```yaml
+# WRONG — corrupts $2b$12$... hashes:
+app:
+  env_file: .env
+
+# CORRECT — pydantic-settings reads raw file, no interpolation:
+app:
+  volumes:
+    - ./.env:/app/.env:ro
+```
+
 ---
 
 ## Memory System
