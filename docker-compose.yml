@@ -1,0 +1,39 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: investments_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_DB: investments
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U investments_user -d investments"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.investments.rule=Host(`money.semishan.pro`)"
+      - "traefik.http.routers.investments.entrypoints=websecure"
+      - "traefik.http.routers.investments.tls.certresolver=letsencrypt"
+      - "traefik.http.services.investments.loadbalancer.server.port=8000"
+    networks:
+      - default
+      - proxy
+
+volumes:
+  postgres_data:
+
+networks:
+  proxy:
+    external: true

@@ -1,0 +1,54 @@
+# Secrets — never commit
+.env
+.env.production
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.venv/
+venv/
+dist/
+build/
+.eggs/
+
+# Ruff / mypy / pytest cache
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Docker volumes (local dev)
+postgres_data/
+
+# Claude session logs (runtime, not source)
+.claude/session-log/*.jsonl
+.claude/session-log.jsonl
+
+# Template dir (separate repo, not project source)
+!claude-project-template/
+
+# Telegram exports and course PDFs — large binaries, store separately
+ChatExport*/
+Course/
+
+# Old specs dir (superseded by .spec_system/)
+specs/

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Investment Assistant{% endblock %}
+
+{% block head %}
+<style>
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; }
+  .panel { background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); padding: 1.25rem; }
+  .panel h2 { font-size: 0.95rem; color: #555; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 1rem; }
+  .placeholder { color: #aaa; font-size: 0.875rem; text-align: center; padding: 2rem 0; }
+  .canvas-wrap { position: relative; height: 200px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="grid">
+  <div class="panel">
+    <h2>Portfolio Allocation</h2>
+    <div class="canvas-wrap">
+      <canvas id="allocationChart"></canvas>
+    </div>
+    <p class="placeholder">Data will appear after first sync</p>
+  </div>
+
+  <div class="panel">
+    <h2>Performance</h2>
+    <div class="canvas-wrap">
+      <canvas id="performanceChart"></canvas>
+    </div>
+    <p class="placeholder">Data will appear after first sync</p>
+  </div>
+
+  <div class="panel">
+    <h2>Progress to Goal</h2>
+    <p class="placeholder">Data will appear after first sync</p>
+  </div>
+
+  <div class="panel">
+    <h2>Last Recommendation</h2>
+    <p class="placeholder">Data will appear after first sync</p>
+  </div>
+</div>
+{% endblock %}
