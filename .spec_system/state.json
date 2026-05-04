@@ -8,8 +8,8 @@
   "phases": {
     "0": {
       "name": "Foundation",
-      "status": "not_started",
-      "session_count": 0
+      "status": "in_progress",
+      "session_count": 1
     },
     "1": {
       "name": "Data Ingestion",
@@ -32,12 +32,12 @@
       "session_count": 0
     }
   },
-  "completed_sessions": [],
+  "completed_sessions": ["phase00-session01-skeleton"],
   "next_session_history": [
     {
       "date": "2026-05-04",
       "session": "phase00-session01-skeleton",
-      "status": "planned"
+      "status": "completed"
     }
   ]
 }
