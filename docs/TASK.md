@@ -4,7 +4,6 @@
 
 | ID | Task | Spec | Risk | Started |
 |----|------|------|------|---------|
-| T-001 | Freedom Finance Excel import (portfolio + trades) | [spec](specs/T-001-freedom-excel-import.md) | Medium | 2026-05-05 |
 
 ## Backlog
 

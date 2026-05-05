@@ -142,7 +142,126 @@ def test_ibkr_upload_requires_auth(client):
     assert "/login" in resp.headers.get("location", "")
 
 
-# --- POST /sync/freedom ---
+# --- GET /sync/freedom ---
+
+
+def test_get_sync_freedom_form_returns_200(authed_client):
+    resp = authed_client.get("/sync/freedom")
+    assert resp.status_code == 200
+    assert "Import from Excel" in resp.text
+
+
+def test_get_sync_freedom_requires_auth(client):
+    resp = client.get("/sync/freedom", allow_redirects=False)
+    assert resp.status_code == 302
+    assert "/login" in resp.headers.get("location", "")
+
+
+# --- POST /sync/freedom/portfolio ---
+
+_PORTFOLIO_FIXTURE = "tests/fixtures/freedom_portfolio_sample.xlsx"
+_TRADES_FIXTURE = "tests/fixtures/freedom_trades_sample.xlsx"
+
+
+def test_freedom_portfolio_upload_creates_position(authed_client, db_session):
+    from app.models import Position
+
+    with open(_PORTFOLIO_FIXTURE, "rb") as f:
+        resp = authed_client.post(
+            "/sync/freedom/portfolio",
+            files={"file": ("freedom_portfolio_sample.xlsx", f, "application/octet-stream")},
+            allow_redirects=False,
+        )
+    assert resp.status_code == 302
+    positions = db_session.query(Position).filter_by(broker="freedom").all()
+    assert len(positions) >= 1
+    tickers = [p.ticker for p in positions]
+    assert "AAPL.US" in tickers
+
+
+def test_freedom_portfolio_upload_idempotent(authed_client, db_session):
+    from app.models import Position
+
+    for _ in range(2):
+        with open(_PORTFOLIO_FIXTURE, "rb") as f:
+            authed_client.post(
+                "/sync/freedom/portfolio",
+                files={"file": ("freedom_portfolio_sample.xlsx", f, "application/octet-stream")},
+                allow_redirects=False,
+            )
+
+    count = db_session.query(Position).filter_by(broker="freedom", ticker="AAPL.US").count()
+    assert count == 1
+
+
+def test_freedom_portfolio_wrong_extension_redirects_with_error(authed_client):
+    resp = authed_client.post(
+        "/sync/freedom/portfolio",
+        files={"file": ("report.csv", b"ticker,qty\nAAPL,1", "text/csv")},
+        allow_redirects=False,
+    )
+    assert resp.status_code == 302
+    assert "/sync/freedom" in resp.headers.get("location", "")
+
+
+def test_freedom_portfolio_requires_auth(client):
+    with open(_PORTFOLIO_FIXTURE, "rb") as f:
+        resp = client.post(
+            "/sync/freedom/portfolio",
+            files={"file": ("freedom_portfolio_sample.xlsx", f, "application/octet-stream")},
+            allow_redirects=False,
+        )
+    assert resp.status_code == 302
+    assert "/login" in resp.headers.get("location", "")
+
+
+# --- POST /sync/freedom/trades ---
+
+
+def test_freedom_trades_upload_creates_transaction(authed_client, db_session):
+    from app.models import Transaction
+
+    with open(_TRADES_FIXTURE, "rb") as f:
+        resp = authed_client.post(
+            "/sync/freedom/trades",
+            files={"file": ("freedom_trades_sample.xlsx", f, "application/octet-stream")},
+            allow_redirects=False,
+        )
+    assert resp.status_code == 302
+    txns = db_session.query(Transaction).filter_by(broker="freedom", ticker="AAPL.US").all()
+    assert len(txns) >= 1
+    assert txns[0].ibkr_txn_id == "freedom_123456789"
+
+
+def test_freedom_trades_upload_idempotent(authed_client, db_session):
+    from app.models import Transaction
+
+    for _ in range(2):
+        with open(_TRADES_FIXTURE, "rb") as f:
+            authed_client.post(
+                "/sync/freedom/trades",
+                files={"file": ("freedom_trades_sample.xlsx", f, "application/octet-stream")},
+                allow_redirects=False,
+            )
+
+    count = db_session.query(Transaction).filter_by(
+        broker="freedom", ibkr_txn_id="freedom_123456789"
+    ).count()
+    assert count == 1
+
+
+def test_freedom_trades_requires_auth(client):
+    with open(_TRADES_FIXTURE, "rb") as f:
+        resp = client.post(
+            "/sync/freedom/trades",
+            files={"file": ("freedom_trades_sample.xlsx", f, "application/octet-stream")},
+            allow_redirects=False,
+        )
+    assert resp.status_code == 302
+    assert "/login" in resp.headers.get("location", "")
+
+
+# --- POST /sync/freedom (legacy — old API sync button removed) ---
 
 
 def test_freedom_sync_with_no_keys_returns_error_flash(authed_client):
