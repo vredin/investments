@@ -1,44 +1,31 @@
-# Session Handoff — 2026-05-04
+# Session Handoff — 2026-05-05
 
 ## Completed This Session
 
-- T-001: Freedom Finance Excel import — full implementation + tests, committed
-  - `parse_freedom_portfolio_xlsx` / `parse_freedom_trades_xlsx` in `app/services/ingestion/freedom.py`
-  - Routes `/sync/freedom/portfolio` + `/sync/freedom/trades` in `app/routers/sync.py`
-  - Template `app/templates/sync_freedom.html`
-  - Fixtures `tests/fixtures/freedom_portfolio_sample.xlsx` + `freedom_trades_sample.xlsx`
-  - 13 unit tests in `tests/test_freedom_xlsx.py` — all pass
-  - 11 e2e tests added to `tests/test_sync_routes.py` — need PostgreSQL to run
-  - Spec: `docs/specs/T-001-freedom-excel-import.md`
-  - Archived: `docs/archive/TASK_ARCHIVE.md` | commit `8eac09a`
-  - Test commit: `76176b7`
-
-- Login fix (bcrypt hash corruption by docker-compose env_file):
-  - Fixed by switching docker-compose to volume mount `.env` instead of `env_file:`
-  - Added `.claude/rules/workflow.md` "CRITICAL: .env Delivery Rules" section
+- T-002: Dashboard summary cards — `app/routers/dashboard.py` reads DB, shows total value, by-broker breakdown, last sync date. Empty-state when no positions. Commit `b123a28`. Deployed.
+- T-003: Portfolio page `/portfolio` — new route + template with positions table (latest snapshot, sorted by market_value DESC) + transactions table (last 50). Broker badges, BUY/SELL/DIV color coding. Nav link added. Commit `a1bd936`. Deployed.
 
 ## In Progress (not finished)
 
-Nothing actively in progress.
+Nothing.
 
 ## Next Session Should
 
-1. **Run e2e tests on VPS** — `uv run pytest tests/test_sync_routes.py -v -k freedom` against live PostgreSQL to confirm all 11 e2e tests pass
-2. **Push to VPS and deploy** — `git push && ssh vps3 'cd /srv/investments && git pull && docker compose restart app'`
-3. **Pick next task from backlog** — backlog is empty; candidates: price sync (Phase 01 Session 02), portfolio dashboard
+1. **Verify live data on VPS** — open https://money.semishan.pro/portfolio and https://money.semishan.pro and confirm positions/transactions from Freedom sync are visible
+2. **Run e2e tests on VPS** — `ssh vps3 "cd /opt/Investments && uv run pytest tests/test_dashboard.py tests/test_portfolio.py tests/test_sync_routes.py -v"` against live PostgreSQL
+3. **Plan next Phase 01 task** — backlog is empty; Phase 01 remaining: price sync (`/sync/prices` via yfinance), PDF ingestion, LLM rule extraction, Telegram parser (see PRD Phase 01 objectives 5-8)
 
 ## Context That Would Be Lost
 
-- Freedom Finance REST API has NO portfolio endpoint — only WebSocket (`notifyPortfolio`). Excel upload is the correct approach; REST is not viable.
-- The `.env` on VPS was accidentally overwritten during session — user manually re-entered all keys. VPS `.env` is correct now.
-- User feedback: when `/todo` is invoked, must run full todo process (ConfidenceChecker → Challenge → Research → Spec → Rex → TASK.md → GitHub issue) even if fix seems obvious from screenshots.
-- E2e tests marked `@requires_db` via `pytestmark = requires_db` at module level — skip cleanly without PostgreSQL.
+- Dashboard shows only the single latest `snapshot_date` across ALL brokers — if ibkr and freedom sync on different days, only the later date's positions appear. Accepted tradeoff for now, will need per-broker latest snapshot in Phase 03.
+- `/portfolio` positions table uses `nullslast()` for market_value_usd ordering — positions with NULL market value appear at the bottom.
+- Transaction type stored as `t.type` in DB model (not `t.txn_type`) — template uses `t.type | lower` for CSS class.
+- T-002 and T-003 specs created in `docs/specs/`, GitHub issues #2 and #3 closed.
 
 ## User's Last Unanswered Question
 
-None — last message "тесты написаны? unit & e2e" was fully answered: 13 unit + 11 e2e tests written, linted, unit tests passing, committed as `76176b7`.
+None — user said "да, T-003" and T-003 is complete and deployed.
 
 ## Open Questions for User
 
-- Should price sync be the next task (Phase 01 Session 02)?
-- VPS deploy needed — push + docker compose restart to get Freedom xlsx import live.
+- Phase 01 has 5 more objectives (price sync, PDF ingestion, LLM rules, Telegram parser) — which to tackle next?
