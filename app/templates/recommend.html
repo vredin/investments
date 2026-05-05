@@ -1,6 +1,77 @@
 {% extends "base.html" %}
 {% block title %}Recommend - Investment Assistant{% endblock %}
+
+{% block head %}
+<style>
+  h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 1.5rem; }
+  .form-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .form-row label { font-size: 0.9rem; color: #555; }
+  .form-row input[type=number] { border: 1px solid #ddd; border-radius: 6px; padding: 0.45rem 0.75rem; font-size: 1rem; width: 130px; }
+  .form-row button { background: #1a1a2e; color: #fff; border: none; border-radius: 6px; padding: 0.5rem 1.25rem; cursor: pointer; font-size: 0.9rem; }
+  .form-row button:hover { opacity: 0.85; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.07); font-size: 0.9rem; }
+  th { background: #f8f8f8; padding: 0.65rem 1rem; text-align: left; font-size: 0.78rem; color: #888; text-transform: uppercase; letter-spacing: 0.04em; border-bottom: 1px solid #eee; }
+  td { padding: 0.65rem 1rem; border-bottom: 1px solid #f4f4f4; }
+  tr:last-child td { border-bottom: none; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .week { display: inline-block; background: #e0f2fe; color: #0369a1; border-radius: 99px; padding: 0.1rem 0.6rem; font-size: 0.78rem; font-weight: 600; }
+  .rationale { font-size: 0.82rem; color: #666; font-style: italic; max-width: 340px; }
+  .done { opacity: 0.45; text-decoration: line-through; }
+  .execute-btn { background: none; border: 1px solid #22c55e; color: #16a34a; border-radius: 4px; padding: 0.2rem 0.6rem; font-size: 0.78rem; cursor: pointer; }
+  .empty { color: #bbb; text-align: center; padding: 2rem; font-size: 0.875rem; }
+  .section-note { font-size: 0.82rem; color: #aaa; margin-bottom: 1rem; }
+</style>
+{% endblock %}
+
 {% block content %}
-<h1 style="font-size:1.2rem;margin-bottom:1rem;">Monthly Buy Recommendation</h1>
-<p style="color:#888;font-size:0.9rem;">Recommendation engine — Phase 02</p>
+<h1>Monthly Buy Recommendation</h1>
+
+<form method="POST" action="/recommend" class="form-row">
+  <label>Monthly budget (USD):
+    <input type="number" name="budget" value="{{ budget | int }}" min="1" step="50" required>
+  </label>
+  <button type="submit">Generate plan</button>
+</form>
+
+{% if rows %}
+<p class="section-note">Plan for <strong>{{ month }}</strong> — {{ rows | length }} ticker(s). Week 1 = first purchase, Week 3 = second DCA purchase.</p>
+<table>
+  <thead>
+    <tr>
+      <th>Ticker</th>
+      <th class="num">Amount (USD)</th>
+      <th>Week</th>
+      <th class="num">Current %</th>
+      <th class="num">Target %</th>
+      <th class="num">Gap</th>
+      <th>Rationale</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in rows %}
+    <tr class="{{ 'done' if r.executed else '' }}">
+      <td><strong>{{ r.ticker }}</strong></td>
+      <td class="num">${{ "%.2f" | format(r.amount_usd) }}</td>
+      <td><span class="week">Wk {{ r.week_of_month }}</span></td>
+      <td class="num">{{ "%.1f" | format(r.current_pct) }}%</td>
+      <td class="num">{{ "%.1f" | format(r.target_pct) }}%</td>
+      <td class="num">+{{ "%.1f" | format(r.deviation_pct) }}%</td>
+      <td class="rationale">{{ r.rationale }}</td>
+      <td>
+        {% if not r.executed %}
+        <form method="POST" action="/recommend/execute/{{ r.month }}/{{ r.ticker }}" style="margin:0;">
+          <button class="execute-btn" type="submit">✓ Done</button>
+        </form>
+        {% else %}
+        <span style="color:#22c55e;font-size:0.8rem;">✓</span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty">No recommendations yet — enter your budget and click "Generate plan".</p>
+{% endif %}
 {% endblock %}
