@@ -7,6 +7,7 @@ from app.auth import login_required
 from app.db import get_db
 from app.services.ingestion import freedom, ibkr
 from app.services.ingestion.broker import BrokerSyncError
+from app.services.ingestion.freedom import _MAX_XLSX_BYTES
 
 router = APIRouter(prefix="/sync", tags=["sync"], dependencies=[Depends(login_required)])
 templates = Jinja2Templates(directory="app/templates")
@@ -77,7 +78,7 @@ async def sync_freedom_portfolio(
         }
         return RedirectResponse(url="/sync/freedom", status_code=302)
     try:
-        content = await file.read()
+        content = await file.read(_MAX_XLSX_BYTES + 1)
         if not content:
             raise BrokerSyncError("Uploaded file is empty")
         count = freedom.import_freedom_portfolio_xlsx(content, db)
@@ -110,7 +111,7 @@ async def sync_freedom_trades(
         }
         return RedirectResponse(url="/sync/freedom", status_code=302)
     try:
-        content = await file.read()
+        content = await file.read(_MAX_XLSX_BYTES + 1)
         if not content:
             raise BrokerSyncError("Uploaded file is empty")
         count = freedom.import_freedom_trades_xlsx(content, db)

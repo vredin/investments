@@ -151,14 +151,28 @@ def _normalize_freedom_transaction(item: dict) -> TransactionRow | None:
         return None
 
 
+_MAX_XLSX_BYTES = 5 * 1024 * 1024  # 5 MB — guards against zip-bomb DoS
+_XLSX_MAGIC = b"PK\x03\x04"        # xlsx is a zip; all valid files start with this
+
+
+def _validate_xlsx_bytes(content: bytes, label: str) -> None:
+    if len(content) > _MAX_XLSX_BYTES:
+        raise BrokerSyncError(f"{label}: file too large (max 5 MB)")
+    if not content.startswith(_XLSX_MAGIC):
+        raise BrokerSyncError(f"{label}: not a valid .xlsx file (wrong magic bytes)")
+
+
 def parse_freedom_portfolio_xlsx(file_content: bytes) -> list[PositionRow]:
     """Parse Freedom24 'Відкриті позиції' Excel export into PositionRow list.
 
     Expected columns (row 1 header):
       Тікер | К-ть | Ціна входу | Ціна | Вартість | Частка (%) | Прибуток | Приріст
     """
+    _validate_xlsx_bytes(file_content, "Portfolio Excel")
     try:
-        wb = openpyxl.load_workbook(io.BytesIO(file_content), data_only=True)
+        wb = openpyxl.load_workbook(
+            io.BytesIO(file_content), data_only=True, keep_links=False
+        )
     except Exception as exc:
         raise BrokerSyncError(f"Cannot open portfolio Excel: {exc}") from exc
 
@@ -212,8 +226,11 @@ def parse_freedom_trades_xlsx(file_content: bytes) -> list[TransactionRow]:
     Expected columns (row 1 header):
       Номер | Дата | Розрахунки | Тікер | Операція | Quantity | Ціна | Сума | Прибуток | Плата
     """
+    _validate_xlsx_bytes(file_content, "Trades Excel")
     try:
-        wb = openpyxl.load_workbook(io.BytesIO(file_content), data_only=True)
+        wb = openpyxl.load_workbook(
+            io.BytesIO(file_content), data_only=True, keep_links=False
+        )
     except Exception as exc:
         raise BrokerSyncError(f"Cannot open trades Excel: {exc}") from exc
 
