@@ -34,9 +34,7 @@
   <a href="/report/{{ now_month | default('2026-05') }}">Report</a>
   <a href="/settings">Settings</a>
   <a href="/sync/ibkr">Sync IBKR</a>
-  <form method="POST" action="/sync/freedom" style="display:inline; margin:0;">
-    <button type="submit" title="Pull live portfolio from Freedom Finance">Sync Freedom</button>
-  </form>
+  <a href="/sync/freedom">Sync Freedom</a>
   <form method="POST" action="/logout">
     <button type="submit">Logout</button>
   </form>

@@ -1,18 +1,22 @@
-"""Freedom Finance TraderNet adapter using direct HTTP calls.
+"""Freedom Finance adapter.
 
-The `tradernet` PyPI package (0.1.3) has no importable source; this module
-implements HMAC-SHA256 signing and REST calls directly using `requests`.
-API base: https://tradernet.com/api
-Auth: public_key + HMAC-SHA256(private_key, JSON_body).
+REST API (tradernet.com) does not expose portfolio/positions via HTTP —
+those are WebSocket-only (notifyPortfolio). Import is done via Excel exports
+from the Freedom24 web UI (Профіль → Портфель → Експорт в Excel).
+
+parse_freedom_portfolio_xlsx  — парсить "Відкриті позиції" Excel
+parse_freedom_trades_xlsx     — парсить "Угоди" Excel
 """
 
 import hashlib
 import hmac
+import io
 import json
 import logging
 import time
 from datetime import date, timedelta
 
+import openpyxl
 import requests
 
 from app.config import get_settings
@@ -145,6 +149,151 @@ def _normalize_freedom_transaction(item: dict) -> TransactionRow | None:
     except (ValueError, TypeError, OSError) as exc:
         logger.warning("Skipping Freedom transaction %s: %s", order_id, exc)
         return None
+
+
+def parse_freedom_portfolio_xlsx(file_content: bytes) -> list[PositionRow]:
+    """Parse Freedom24 'Відкриті позиції' Excel export into PositionRow list.
+
+    Expected columns (row 1 header):
+      Тікер | К-ть | Ціна входу | Ціна | Вартість | Частка (%) | Прибуток | Приріст
+    """
+    try:
+        wb = openpyxl.load_workbook(io.BytesIO(file_content), data_only=True)
+    except Exception as exc:
+        raise BrokerSyncError(f"Cannot open portfolio Excel: {exc}") from exc
+
+    ws = wb.active
+    rows = list(ws.iter_rows(values_only=True))
+    if not rows:
+        raise BrokerSyncError("Portfolio Excel is empty")
+
+    header = [str(c).strip() if c is not None else "" for c in rows[0]]
+    required = {"Тікер", "К-ть", "Ціна входу", "Вартість"}
+    missing = required - set(header)
+    if missing:
+        raise BrokerSyncError(f"Portfolio Excel missing columns: {missing}")
+
+    idx = {name: i for i, name in enumerate(header)}
+    result: list[PositionRow] = []
+
+    for row in rows[1:]:
+        if not any(v is not None for v in row):
+            continue
+        ticker = str(row[idx["Тікер"]] or "").strip()
+        if not ticker or "/" in ticker:
+            # Skip cash rows like USD/EUR
+            continue
+        try:
+            qty = float(row[idx["К-ть"]] or 0)
+            entry_price = float(row[idx["Ціна входу"]] or 0)
+            market_value = float(row[idx["Вартість"]] or 0)
+            cost_basis = round(qty * entry_price, 6)
+            # Determine currency from ticker suffix (.US → USD, else USD default)
+            currency = "USD" if ticker.endswith(".US") else "USD"
+            result.append(
+                PositionRow(
+                    ticker=ticker,
+                    qty=qty,
+                    market_value=market_value,
+                    cost_basis=cost_basis,
+                    currency=currency,
+                    broker=_BROKER,
+                )
+            )
+        except (ValueError, TypeError) as exc:
+            logger.warning("Skipping portfolio row %s: %s", ticker, exc)
+
+    return result
+
+
+def parse_freedom_trades_xlsx(file_content: bytes) -> list[TransactionRow]:
+    """Parse Freedom24 'Угоди' Excel export into TransactionRow list.
+
+    Expected columns (row 1 header):
+      Номер | Дата | Розрахунки | Тікер | Операція | Quantity | Ціна | Сума | Прибуток | Плата
+    """
+    try:
+        wb = openpyxl.load_workbook(io.BytesIO(file_content), data_only=True)
+    except Exception as exc:
+        raise BrokerSyncError(f"Cannot open trades Excel: {exc}") from exc
+
+    ws = wb.active
+    rows = list(ws.iter_rows(values_only=True))
+    if not rows:
+        raise BrokerSyncError("Trades Excel is empty")
+
+    header = [str(c).strip() if c is not None else "" for c in rows[0]]
+    required = {"Номер", "Дата", "Тікер", "Операція", "Quantity", "Ціна", "Сума"}
+    missing = required - set(header)
+    if missing:
+        raise BrokerSyncError(f"Trades Excel missing columns: {missing}")
+
+    idx = {name: i for i, name in enumerate(header)}
+    result: list[TransactionRow] = []
+
+    for row in rows[1:]:
+        if not any(v is not None for v in row):
+            continue
+        ticker = str(row[idx["Тікер"]] or "").strip()
+        if not ticker or "/" in ticker:
+            # Skip cash conversion rows like USD/EUR
+            continue
+        try:
+            order_id = str(row[idx["Номер"]] or "").strip()
+            raw_date = row[idx["Дата"]]
+            if hasattr(raw_date, "date"):
+                trade_date = raw_date.date()
+            else:
+                from datetime import datetime
+                trade_date = datetime.strptime(str(raw_date)[:10], "%Y-%m-%d").date()
+
+            operation = str(row[idx["Операція"]] or "").strip().lower()
+            txn_type = "BUY" if "купівля" in operation or "buy" in operation else "SELL"
+
+            qty = abs(float(row[idx["Quantity"]] or 0))
+            price = float(row[idx["Ціна"]] or 0)
+            amount = abs(float(row[idx["Сума"]] or 0))
+            commission = float(row[idx.get("Плата", -1)] or 0) if "Плата" in idx else 0.0
+            currency = "USD" if ticker.endswith(".US") else "USD"
+
+            ibkr_txn_id = f"freedom_{order_id}" if order_id else (
+                f"freedom_{trade_date.isoformat()}_{ticker}_{qty}"
+            )
+
+            result.append(
+                TransactionRow(
+                    ibkr_txn_id=ibkr_txn_id,
+                    ticker=ticker,
+                    trade_date=trade_date,
+                    txn_type=txn_type,
+                    qty=qty,
+                    price=price,
+                    amount=amount,
+                    commission=commission,
+                    currency=currency,
+                    broker=_BROKER,
+                )
+            )
+        except (ValueError, TypeError, AttributeError) as exc:
+            logger.warning("Skipping trade row %s: %s", row, exc)
+
+    return result
+
+
+def import_freedom_portfolio_xlsx(file_content: bytes, db) -> int:
+    """Parse portfolio Excel and upsert positions. Returns count upserted."""
+    rows = parse_freedom_portfolio_xlsx(file_content)
+    count = upsert_positions(db, rows)
+    logger.info("Imported %d Freedom Finance positions from Excel", count)
+    return count
+
+
+def import_freedom_trades_xlsx(file_content: bytes, db) -> int:
+    """Parse trades Excel and upsert transactions. Returns count upserted."""
+    rows = parse_freedom_trades_xlsx(file_content)
+    count = upsert_transactions(db, rows)
+    logger.info("Imported %d Freedom Finance transactions from Excel", count)
+    return count
 
 
 def sync_freedom_positions(db) -> int:

@@ -59,29 +59,75 @@ async def sync_ibkr(
     return RedirectResponse(url="/", status_code=302)
 
 
-@router.post("/freedom")
-async def sync_freedom(
+@router.get("/freedom", response_class=HTMLResponse)
+async def sync_freedom_form(request: Request):
+    return templates.TemplateResponse(request, "sync_freedom.html")
+
+
+@router.post("/freedom/portfolio")
+async def sync_freedom_portfolio(
     request: Request,
+    file: UploadFile,
     db: Session = Depends(get_db),
 ):
+    if not (file.filename or "").lower().endswith(".xlsx"):
+        request.session["flash"] = {
+            "type": "error",
+            "msg": "Please upload an .xlsx file (Freedom24 → Профіль → Портфель → Експорт в Excel)",
+        }
+        return RedirectResponse(url="/sync/freedom", status_code=302)
     try:
-        pos_count = freedom.sync_freedom_positions(db)
-        txn_count = freedom.sync_freedom_transactions(db)
+        content = await file.read()
+        if not content:
+            raise BrokerSyncError("Uploaded file is empty")
+        count = freedom.import_freedom_portfolio_xlsx(content, db)
         db.commit()
         request.session["flash"] = {
             "type": "success",
-            "msg": f"Synced {pos_count} positions, {txn_count} transactions from Freedom Finance",
+            "msg": f"Imported {count} positions from Freedom Finance portfolio",
         }
     except BrokerSyncError as exc:
         db.rollback()
-        request.session["flash"] = {"type": "error", "msg": f"Freedom Finance sync failed: {exc}"}
+        request.session["flash"] = {"type": "error", "msg": f"Freedom portfolio import failed: {exc}"}
     except Exception as exc:
         db.rollback()
-        request.session["flash"] = {"type": "error", "msg": "Freedom Finance sync failed: unexpected error"}
+        request.session["flash"] = {"type": "error", "msg": "Freedom portfolio import failed: unexpected error"}
         import logging
-        logging.getLogger(__name__).exception("Unexpected Freedom sync error: %s", exc)
+        logging.getLogger(__name__).exception("Unexpected Freedom portfolio import error: %s", exc)
+    return RedirectResponse(url="/sync/freedom", status_code=302)
 
-    return RedirectResponse(url="/", status_code=302)
+
+@router.post("/freedom/trades")
+async def sync_freedom_trades(
+    request: Request,
+    file: UploadFile,
+    db: Session = Depends(get_db),
+):
+    if not (file.filename or "").lower().endswith(".xlsx"):
+        request.session["flash"] = {
+            "type": "error",
+            "msg": "Please upload an .xlsx file (Freedom24 → Профіль → Угоди → Експорт в Excel)",
+        }
+        return RedirectResponse(url="/sync/freedom", status_code=302)
+    try:
+        content = await file.read()
+        if not content:
+            raise BrokerSyncError("Uploaded file is empty")
+        count = freedom.import_freedom_trades_xlsx(content, db)
+        db.commit()
+        request.session["flash"] = {
+            "type": "success",
+            "msg": f"Imported {count} transactions from Freedom Finance trades",
+        }
+    except BrokerSyncError as exc:
+        db.rollback()
+        request.session["flash"] = {"type": "error", "msg": f"Freedom trades import failed: {exc}"}
+    except Exception as exc:
+        db.rollback()
+        request.session["flash"] = {"type": "error", "msg": "Freedom trades import failed: unexpected error"}
+        import logging
+        logging.getLogger(__name__).exception("Unexpected Freedom trades import error: %s", exc)
+    return RedirectResponse(url="/sync/freedom", status_code=302)
 
 
 @router.post("/prices")
