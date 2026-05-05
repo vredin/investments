@@ -4,40 +4,58 @@
 
 {% block head %}
 <style>
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; }
   .panel { background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); padding: 1.25rem; }
-  .panel h2 { font-size: 0.95rem; color: #555; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 1rem; }
+  .panel h2 { font-size: 0.85rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; }
+  .panel .value { font-size: 1.9rem; font-weight: 700; color: #1a1a1a; }
+  .panel .sub { font-size: 0.8rem; color: #aaa; margin-top: 0.25rem; }
+  .broker-list { list-style: none; padding: 0; margin: 0; }
+  .broker-list li { display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px solid #f0f0f0; font-size: 0.9rem; }
+  .broker-list li:last-child { border-bottom: none; }
   .placeholder { color: #aaa; font-size: 0.875rem; text-align: center; padding: 2rem 0; }
-  .canvas-wrap { position: relative; height: 200px; }
+  .empty-hint { font-size: 0.8rem; color: #bbb; margin-top: 0.5rem; }
 </style>
 {% endblock %}
 
 {% block content %}
+{% if last_sync %}
 <div class="grid">
   <div class="panel">
-    <h2>Portfolio Allocation</h2>
-    <div class="canvas-wrap">
-      <canvas id="allocationChart"></canvas>
-    </div>
-    <p class="placeholder">Data will appear after first sync</p>
+    <h2>Total Portfolio Value</h2>
+    <div class="value">${{ "%.2f"|format(total_value) }}</div>
+    <div class="sub">{{ positions_count }} position{{ 's' if positions_count != 1 else '' }} &mdash; as of {{ last_sync }}</div>
+  </div>
+
+  <div class="panel">
+    <h2>By Broker</h2>
+    {% if by_broker %}
+    <ul class="broker-list">
+      {% for broker, value in by_broker.items() | sort(attribute='1', reverse=True) %}
+      <li>
+        <span>{{ broker | upper }}</span>
+        <strong>${{ "%.2f"|format(value) }}</strong>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="placeholder">No broker data</p>
+    {% endif %}
   </div>
 
   <div class="panel">
     <h2>Performance</h2>
-    <div class="canvas-wrap">
-      <canvas id="performanceChart"></canvas>
-    </div>
-    <p class="placeholder">Data will appear after first sync</p>
+    <p class="placeholder">Available in Phase 03</p>
   </div>
 
   <div class="panel">
-    <h2>Progress to Goal</h2>
-    <p class="placeholder">Data will appear after first sync</p>
-  </div>
-
-  <div class="panel">
-    <h2>Last Recommendation</h2>
-    <p class="placeholder">Data will appear after first sync</p>
+    <h2>Progress to Goal ($1.3M)</h2>
+    <p class="placeholder">Available in Phase 03</p>
   </div>
 </div>
+{% else %}
+<div style="text-align:center; padding: 4rem 1rem; color: #aaa;">
+  <p style="font-size:1.1rem;">No positions found.</p>
+  <p class="empty-hint">Sync data from <a href="/sync/ibkr">IBKR</a> or <a href="/sync/freedom">Freedom Finance</a> to get started.</p>
+</div>
+{% endif %}
 {% endblock %}
