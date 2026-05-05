@@ -4,8 +4,6 @@
 
 | ID | Task | Spec | Risk | Started |
 |----|------|------|------|---------|
-| T-002 | Dashboard summary cards (total value, by broker, last sync) | [spec](specs/T-002-dashboard-summary.md) | Low | 2026-05-05 |
-
 ## Backlog
 
 | ID | Task | Spec | Risk | Created |
