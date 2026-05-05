@@ -8,3 +8,5 @@
 | T-002 | Dashboard summary cards (total value, by broker, last sync) | 2026-05-05 | b123a28 |
 | T-003 | Portfolio page /portfolio (positions + transactions tables) | 2026-05-05 | a1bd936 |
 | T-004 | Price sync via yfinance (/sync/prices, 250d history, 4 target ETFs) | 2026-05-05 | 570ad2a |
+| T-005 | Monthly buy recommender — underweight-first allocation + oversold scoring + LLM rationale + web UI | 2026-05-05 | 89e93f5 |
+| T-006 | Analytics dashboard — allocation donut, goal projection (FV), rebalancing signal, monthly report with LLM | 2026-05-05 | 47c1a66 |

@@ -1,36 +1,26 @@
 # Session Handoff — 2026-05-05
 
 ## Completed This Session
-
-- T-002: Dashboard summary cards — DB-backed, total value + by-broker + last sync. Commit `b123a28`. Deployed.
-- T-003: Portfolio page `/portfolio` — positions + transactions tables, nav link. Commit `a1bd936`. Deployed.
-- T-004: Price sync via yfinance — `app/services/prices.py`, POST `/sync/prices`, "Sync Prices" nav button. Ticker mapping: AAPL.US→AAPL, VWCE→VWCE.AS, VEUR→VEUR.AS, AGGH→AGGH.L, XEON→XEON.DE. 7 unit tests pass. Commit `570ad2a`. Deployed.
-- T-004/T-005/T-006 specs created and GitHub issues #4/#5/#6 opened.
+- T-005: Monthly buy recommender — done, committed 89e93f5, deployed
+- T-006: Analytics dashboard — done, committed 47c1a66, deployed
 
 ## In Progress (not finished)
-
-Nothing.
+None — both tasks fully complete, deployed, archived, GitHub issues closed.
 
 ## Next Session Should
-
-1. **`/todo start T-005`** then implement buy recommender — `app/services/recommender.py`, settings page (Config table: target allocations + budget), `/recommend` route, LLM rationale with Claude Sonnet fallback
-2. **Before T-005**: run "Sync Prices" on live site to populate `prices` table — needed for oversold scoring in recommender
-3. **After T-005**: `T-006` — analytics dashboard (allocation donut, goal projection to $1.3M, rebalancing signal)
+1. Check https://money.semishan.pro in browser — verify dashboard donut chart renders, /report/2026-05 loads with LLM narrative
+2. If ANTHROPIC_API_KEY not set on server (check: ssh vps3 "grep ANTHROPIC /opt/Investments/.env"), add it so LLM features work in prod
+3. Plan next phase — check gh issue list --state open for new backlog items
 
 ## Context That Would Be Lost
-
-- Target ETF yfinance symbols are hardcoded in `app/services/prices.py:_TARGET_ETF_MAP`: VWCE.AS, VEUR.AS, AGGH.L, XEON.DE. If user ever buys these on a different exchange (e.g. Xetra for VWCE.DE), the mapping must be updated manually.
-- T-005 recommender spec: AAPL.US is NOT in target allocation (VWCE/VEUR/AGGH/XEON) — must be shown as "unmanaged position", not recommended for purchase.
-- T-005 LLM fallback: if Anthropic API fails, use "Allocation-driven purchase (target: X%)" string — no 500 error.
-- Config table seeds: first run needs default target allocations (VWCE=65, VEUR=15, AGGH=15, XEON=5) and budget_usd=200 seeded on first access — missing seed = division by zero in allocation calc.
-- User is just starting portfolio (AAPL.US test position only). Real portfolio being built around VWCE/VEUR/AGGH/XEON.
-- PRD goal: $1.3M by 2046, monthly contributions $200-1000, target allocation 65/15/15/5.
+- T-005 test fix: test_llm_fallback_on_exception patches app.config.get_settings (not app.services.recommender.anthropic) because anthropic is lazy-imported inside function body — module-level patch fails for lazy imports
+- T-006 FV formula: fv_projection(0, 200, 8.0, 240) = ~$117K (not $589K) — correct math for $200/mo at 8%/yr over 20 years
+- analytics.compute_dashboard_data uses quantity*latest_price if price data exists, falls back to market_value_usd
+- upsert_snapshot calls db.commit() internally — report route does not need extra commit
+- Dashboard template no longer uses positions_count or by_broker — replaced by analytics service context
 
 ## User's Last Unanswered Question
-
-None — last message was "запусти T-004 по процессу" and T-004 is complete and deployed.
+None — user's last message was implementing T-005 and T-006, both now complete.
 
 ## Open Questions for User
-
-- Ready to implement T-005 (recommender)? It's the most complex task (High risk, LLM integration).
-- Should we verify "Sync Prices" worked on live site before starting T-005?
+- ANTHROPIC_API_KEY on VPS: needed for LLM rationale (recommender) + narrative (report). Both fall back silently if missing.
