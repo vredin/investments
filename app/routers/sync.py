@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.auth import login_required
 from app.db import get_db
+from app.services import prices as prices_service
 from app.services.ingestion import freedom, ibkr
 from app.services.ingestion.broker import BrokerSyncError
 from app.services.ingestion.freedom import _MAX_XLSX_BYTES
@@ -132,7 +133,19 @@ async def sync_freedom_trades(
 
 
 @router.post("/prices")
-async def sync_prices(request: Request):
-    # Phase 01 Session 02: call services.prices.sync_prices()
-    request.session["flash"] = {"type": "info", "msg": "Price sync not implemented yet"}
+async def sync_prices(request: Request, db: Session = Depends(get_db)):
+    try:
+        result = prices_service.sync_prices(db)
+        db.commit()
+        msg = f"Synced {result['rows']} price rows for {result['tickers']} tickers"
+        if result["failed"]:
+            msg += f" (failed: {', '.join(result['failed'])})"
+            request.session["flash"] = {"type": "info", "msg": msg}
+        else:
+            request.session["flash"] = {"type": "success", "msg": msg}
+    except Exception as exc:
+        db.rollback()
+        request.session["flash"] = {"type": "error", "msg": "Price sync failed: unexpected error"}
+        import logging
+        logging.getLogger(__name__).exception("Unexpected price sync error: %s", exc)
     return RedirectResponse(url="/", status_code=302)
