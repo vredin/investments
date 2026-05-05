@@ -2,8 +2,10 @@
 
 ## Completed This Session
 
-- T-002: Dashboard summary cards — `app/routers/dashboard.py` reads DB, shows total value, by-broker breakdown, last sync date. Empty-state when no positions. Commit `b123a28`. Deployed.
-- T-003: Portfolio page `/portfolio` — new route + template with positions table (latest snapshot, sorted by market_value DESC) + transactions table (last 50). Broker badges, BUY/SELL/DIV color coding. Nav link added. Commit `a1bd936`. Deployed.
+- T-002: Dashboard summary cards — DB-backed, total value + by-broker + last sync. Commit `b123a28`. Deployed.
+- T-003: Portfolio page `/portfolio` — positions + transactions tables, nav link. Commit `a1bd936`. Deployed.
+- T-004: Price sync via yfinance — `app/services/prices.py`, POST `/sync/prices`, "Sync Prices" nav button. Ticker mapping: AAPL.US→AAPL, VWCE→VWCE.AS, VEUR→VEUR.AS, AGGH→AGGH.L, XEON→XEON.DE. 7 unit tests pass. Commit `570ad2a`. Deployed.
+- T-004/T-005/T-006 specs created and GitHub issues #4/#5/#6 opened.
 
 ## In Progress (not finished)
 
@@ -11,21 +13,24 @@ Nothing.
 
 ## Next Session Should
 
-1. **Verify live data on VPS** — open https://money.semishan.pro/portfolio and https://money.semishan.pro and confirm positions/transactions from Freedom sync are visible
-2. **Run e2e tests on VPS** — `ssh vps3 "cd /opt/Investments && uv run pytest tests/test_dashboard.py tests/test_portfolio.py tests/test_sync_routes.py -v"` against live PostgreSQL
-3. **Plan next Phase 01 task** — backlog is empty; Phase 01 remaining: price sync (`/sync/prices` via yfinance), PDF ingestion, LLM rule extraction, Telegram parser (see PRD Phase 01 objectives 5-8)
+1. **`/todo start T-005`** then implement buy recommender — `app/services/recommender.py`, settings page (Config table: target allocations + budget), `/recommend` route, LLM rationale with Claude Sonnet fallback
+2. **Before T-005**: run "Sync Prices" on live site to populate `prices` table — needed for oversold scoring in recommender
+3. **After T-005**: `T-006` — analytics dashboard (allocation donut, goal projection to $1.3M, rebalancing signal)
 
 ## Context That Would Be Lost
 
-- Dashboard shows only the single latest `snapshot_date` across ALL brokers — if ibkr and freedom sync on different days, only the later date's positions appear. Accepted tradeoff for now, will need per-broker latest snapshot in Phase 03.
-- `/portfolio` positions table uses `nullslast()` for market_value_usd ordering — positions with NULL market value appear at the bottom.
-- Transaction type stored as `t.type` in DB model (not `t.txn_type`) — template uses `t.type | lower` for CSS class.
-- T-002 and T-003 specs created in `docs/specs/`, GitHub issues #2 and #3 closed.
+- Target ETF yfinance symbols are hardcoded in `app/services/prices.py:_TARGET_ETF_MAP`: VWCE.AS, VEUR.AS, AGGH.L, XEON.DE. If user ever buys these on a different exchange (e.g. Xetra for VWCE.DE), the mapping must be updated manually.
+- T-005 recommender spec: AAPL.US is NOT in target allocation (VWCE/VEUR/AGGH/XEON) — must be shown as "unmanaged position", not recommended for purchase.
+- T-005 LLM fallback: if Anthropic API fails, use "Allocation-driven purchase (target: X%)" string — no 500 error.
+- Config table seeds: first run needs default target allocations (VWCE=65, VEUR=15, AGGH=15, XEON=5) and budget_usd=200 seeded on first access — missing seed = division by zero in allocation calc.
+- User is just starting portfolio (AAPL.US test position only). Real portfolio being built around VWCE/VEUR/AGGH/XEON.
+- PRD goal: $1.3M by 2046, monthly contributions $200-1000, target allocation 65/15/15/5.
 
 ## User's Last Unanswered Question
 
-None — user said "да, T-003" and T-003 is complete and deployed.
+None — last message was "запусти T-004 по процессу" and T-004 is complete and deployed.
 
 ## Open Questions for User
 
-- Phase 01 has 5 more objectives (price sync, PDF ingestion, LLM rules, Telegram parser) — which to tackle next?
+- Ready to implement T-005 (recommender)? It's the most complex task (High risk, LLM integration).
+- Should we verify "Sync Prices" worked on live site before starting T-005?
