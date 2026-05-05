@@ -4,8 +4,6 @@
 
 | ID | Task | Spec | Risk | Started |
 |----|------|------|------|---------|
-| T-003 | Portfolio page /portfolio (positions + transactions tables) | [spec](specs/T-003-portfolio-page.md) | Low | 2026-05-05 |
-
 ## Backlog
 
 | ID | Task | Spec | Risk | Created |

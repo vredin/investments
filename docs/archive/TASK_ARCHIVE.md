@@ -6,3 +6,4 @@
 | T-002 | Blocking Stop-hook context enforcement (DA-009 follow-up). Stop hook exits 2 when commits since last [HANDOFF] > 6 OR lines changed > 500 AND docs/handoff.md is stale/missing — forces Claude to continue with instruction to write handoff. Portable stat (BSD+GNU), works without [HANDOFF] anchor via 4h window fallback, immune to initial-commit parent lookup via per-commit log aggregation. Tunable via CTX_BUDGET_MAX_COMMITS / CTX_BUDGET_MAX_LINES env. 17/17 tests pass. | 2026-04-11 | TBD |
 | T-001 | Freedom Finance Excel import (portfolio + trades) | 2026-05-05 | 8eac09a |
 | T-002 | Dashboard summary cards (total value, by broker, last sync) | 2026-05-05 | b123a28 |
+| T-003 | Portfolio page /portfolio (positions + transactions tables) | 2026-05-05 | a1bd936 |
