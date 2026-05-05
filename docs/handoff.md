@@ -1,37 +1,44 @@
 # Session Handoff — 2026-05-04
 
 ## Completed This Session
-- phase01-session01-broker-sync: всі 21 задач виконані (коміт 45859bb)
-  - broker.py: PositionRow/TransactionRow DTOs, upsert з ON CONFLICT DO UPDATE
-  - ibkr.py: parse_flex_xml, import_flex_xml, sync_ibkr_positions → BrokerSyncError
-  - freedom.py: прямий HTTP + HMAC-SHA256 (tradernet SDK порожній), 30s timeout, 2 retry
-  - sync.py: GET/POST /sync/ibkr, POST /sync/freedom з flash messages
-  - sync_ibkr.html, base.html nav links, 38 unit тестів, fixture XML
-  - Задеплоєно на VPS (money.semishan.pro), app running
 
-## In Progress (не завершено)
-- **КРИТИЧНА ПРОБЛЕМА**: ADMIN_PASSWORD_HASH на VPS = фейковий тестовий хеш
-  - При `scp .env vps3:/opt/Investments/.env` я перезаписав реальний .env на сервері
-  - Локальний .env (який пішов на сервер) мав `$2b$12$dummyhashforlocaltesting...`
-  - Зараз **логін на money.semishan.pro НЕ ПРАЦЮЄ**
-  - Freedom Finance ключі є в локальному .env але не перевірялись
+- T-001: Freedom Finance Excel import — full implementation + tests, committed
+  - `parse_freedom_portfolio_xlsx` / `parse_freedom_trades_xlsx` in `app/services/ingestion/freedom.py`
+  - Routes `/sync/freedom/portfolio` + `/sync/freedom/trades` in `app/routers/sync.py`
+  - Template `app/templates/sync_freedom.html`
+  - Fixtures `tests/fixtures/freedom_portfolio_sample.xlsx` + `freedom_trades_sample.xlsx`
+  - 13 unit tests in `tests/test_freedom_xlsx.py` — all pass
+  - 11 e2e tests added to `tests/test_sync_routes.py` — need PostgreSQL to run
+  - Spec: `docs/specs/T-001-freedom-excel-import.md`
+  - Archived: `docs/archive/TASK_ARCHIVE.md` | commit `8eac09a`
+  - Test commit: `76176b7`
+
+- Login fix (bcrypt hash corruption by docker-compose env_file):
+  - Fixed by switching docker-compose to volume mount `.env` instead of `env_file:`
+  - Added `.claude/rules/workflow.md` "CRITICAL: .env Delivery Rules" section
+
+## In Progress (not finished)
+
+Nothing actively in progress.
 
 ## Next Session Should
-1. **ПЕРШОЧЕРГОВО** — відновити ADMIN_PASSWORD_HASH:
-   - Дізнатись admin пароль у юзера
-   - `python -c "import bcrypt; print(bcrypt.hashpw(b'ПАРОЛЬ', bcrypt.gensalt()).decode())"`
-   - `ssh vps3 "nano /opt/Investments/.env"` — вставити справжній хеш
-   - `ssh vps3 "cd /opt/Investments && docker compose restart app"`
-   - Перевірити логін на money.semishan.pro
-2. Перевірити Freedom Finance: після логіну → "Sync Freedom" → flash з кількістю або clear BrokerSyncError (не 500)
-3. Завантажити реальний IBKR Flex XML: Activity Statement з IBKR Portal → /sync/ibkr → перевірити DB
+
+1. **Run e2e tests on VPS** — `uv run pytest tests/test_sync_routes.py -v -k freedom` against live PostgreSQL to confirm all 11 e2e tests pass
+2. **Push to VPS and deploy** — `git push && ssh vps3 'cd /srv/investments && git pull && docker compose restart app'`
+3. **Pick next task from backlog** — backlog is empty; candidates: price sync (Phase 01 Session 02), portfolio dashboard
 
 ## Context That Would Be Lost
-- tradernet 0.1.3 має НЕ importable source — тільки dist-info. Freedom адаптер = прямі HTTP requests з HMAC-SHA256. Методи API: `getPortfolio`, `getTransactionHistory` — можуть потребувати уточнення.
-- Position PK = (snapshot_date, ticker), upsert по ньому. В spec було написано (instrument_id, broker) — це неправильно, модель така.
-- uv pip install pytest потрібен окремо бо `uv sync --dev` не ставить pytest в venv локально (баг в конфігурації проекту).
-- .gitignore мав `specs/` (без /) — виправлено на `/specs/` щоб не блокувати .spec_system/specs/
-- `docker compose exec app uv run python` створює новий venv в контейнері — краще `docker compose exec app python`
+
+- Freedom Finance REST API has NO portfolio endpoint — only WebSocket (`notifyPortfolio`). Excel upload is the correct approach; REST is not viable.
+- The `.env` on VPS was accidentally overwritten during session — user manually re-entered all keys. VPS `.env` is correct now.
+- User feedback: when `/todo` is invoked, must run full todo process (ConfidenceChecker → Challenge → Research → Spec → Rex → TASK.md → GitHub issue) even if fix seems obvious from screenshots.
+- E2e tests marked `@requires_db` via `pytestmark = requires_db` at module level — skip cleanly without PostgreSQL.
 
 ## User's Last Unanswered Question
-Я запитав: "Який варіант відновити ADMIN_PASSWORD_HASH: (1) згенерувати новий з паролю або (2) знайти старий?" — відповідь НЕ ОТРИМАНА. Почни наступну сесію з цього питання.
+
+None — last message "тесты написаны? unit & e2e" was fully answered: 13 unit + 11 e2e tests written, linted, unit tests passing, committed as `76176b7`.
+
+## Open Questions for User
+
+- Should price sync be the next task (Phase 01 Session 02)?
+- VPS deploy needed — push + docker compose restart to get Freedom xlsx import live.
