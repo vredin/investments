@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import get_settings
-from app.routers import admin, auth_router, dashboard, recommend, report, settings, sync
+from app.routers import admin, auth_router, dashboard, portfolio, recommend, report, settings, sync
 from app.scheduler import scheduler
 
 
@@ -26,6 +26,7 @@ app.add_middleware(
 
 app.include_router(auth_router.router)
 app.include_router(dashboard.router)
+app.include_router(portfolio.router)
 app.include_router(sync.router)
 app.include_router(recommend.router)
 app.include_router(report.router)
