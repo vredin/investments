@@ -129,11 +129,44 @@ def compute_dashboard_data(db: Session) -> dict:
         "projection_2046_usd": projection,
         "progress_pct": progress_pct,
         "goal_usd": goal_usd,
+        "budget_usd": budget_usd,
+        "assumed_return": assumed_return,
         "donut_labels": donut_labels,
         "donut_current": donut_current,
         "donut_target": donut_target,
         "ext_balances": ext_balances,
         "last_sync": last_sync,
+    }
+
+
+def build_goal_chart_data(
+    current_capital: float,
+    pmt: float,
+    r_annual: float,
+    goal_usd: float,
+    snapshots: list,
+) -> dict:
+    """Monthly projection curve + actual snapshot points for Chart.js."""
+    today = date.today()
+    n_months = _months_to_goal()
+
+    labels, expected = [], []
+    for i in range(0, n_months + 1, 6):
+        fv = fv_projection(current_capital, pmt, r_annual, i)
+        m = (today.month - 1 + i) % 12 + 1
+        y = today.year + (today.month - 1 + i) // 12
+        labels.append(f"{y}-{m:02d}")
+        expected.append(round(fv, 0))
+
+    actual_labels = [s.month + "-01" for s in snapshots]
+    actual_values = [round(s.total_capital_usd or 0, 0) for s in snapshots]
+
+    return {
+        "gc_labels": labels,
+        "gc_expected": expected,
+        "gc_actual_labels": actual_labels,
+        "gc_actual_values": actual_values,
+        "gc_goal": goal_usd,
     }
 
 

@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Portfolio - Investment Assistant{% endblock %}
+{% block title %}Портфель — Инвестиции{% endblock %}
 
 {% block head %}
 <style>
@@ -26,22 +26,22 @@
 {% endblock %}
 
 {% block content %}
-<h1>Portfolio</h1>
+<h1>Портфель</h1>
 
 {% if last_sync %}
-<p class="sync-date">Last sync: {{ last_sync }}</p>
+<p class="sync-date">Синхронизировано: {{ last_sync }}</p>
 {% endif %}
 
-<h2>Positions</h2>
+<h2>Позиции</h2>
 <div class="table-wrap">
   <table>
     <thead>
       <tr>
-        <th>Ticker</th>
-        <th>Broker</th>
-        <th class="num">Qty</th>
-        <th class="num">Avg Cost (USD)</th>
-        <th class="num">Market Value (USD)</th>
+        <th>Тикер</th>
+        <th>Брокер</th>
+        <th class="num">Количество</th>
+        <th class="num">Ср. цена ($)</th>
+        <th class="num">Рыночная стоимость ($)</th>
       </tr>
     </thead>
     <tbody>
@@ -56,25 +56,25 @@
         </tr>
         {% endfor %}
       {% else %}
-        <tr><td colspan="5" class="empty">No positions — sync from <a href="/sync/ibkr">IBKR</a> or <a href="/sync/freedom">Freedom Finance</a></td></tr>
+        <tr><td colspan="5" class="empty">Нет позиций — <a href="/sync/freedom">синхронизировать Freedom Finance</a></td></tr>
       {% endif %}
     </tbody>
   </table>
 </div>
 
-<h2>Recent Transactions (last 50)</h2>
+<h2>Последние сделки (50 шт)</h2>
 <div class="table-wrap">
   <table>
     <thead>
       <tr>
-        <th>Date</th>
-        <th>Ticker</th>
-        <th>Type</th>
-        <th class="num">Qty</th>
-        <th class="num">Price (USD)</th>
-        <th class="num">Amount (USD)</th>
-        <th class="num">Fee (USD)</th>
-        <th>Broker</th>
+        <th>Дата</th>
+        <th>Тикер</th>
+        <th>Тип</th>
+        <th class="num">Кол-во</th>
+        <th class="num">Цена ($)</th>
+        <th class="num">Сумма ($)</th>
+        <th class="num">Комиссия ($)</th>
+        <th>Брокер</th>
       </tr>
     </thead>
     <tbody>
@@ -92,7 +92,7 @@
         </tr>
         {% endfor %}
       {% else %}
-        <tr><td colspan="8" class="empty">No transactions found</td></tr>
+        <tr><td colspan="8" class="empty">Сделок не найдено</td></tr>
       {% endif %}
     </tbody>
   </table>

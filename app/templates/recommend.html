@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Recommend - Investment Assistant{% endblock %}
+{% block title %}Рекомендации — Инвестиции{% endblock %}
 
 {% block head %}
 <style>
@@ -24,27 +24,27 @@
 {% endblock %}
 
 {% block content %}
-<h1>Monthly Buy Recommendation</h1>
+<h1>Рекомендации на месяц</h1>
 
 <form method="POST" action="/recommend" class="form-row">
-  <label>Monthly budget (USD):
+  <label>Бюджет на месяц ($):
     <input type="number" name="budget" value="{{ budget | int }}" min="1" step="50" required>
   </label>
-  <button type="submit">Generate plan</button>
+  <button type="submit">Сформировать план</button>
 </form>
 
 {% if rows %}
-<p class="section-note">Plan for <strong>{{ month }}</strong> — {{ rows | length }} ticker(s). Week 1 = first purchase, Week 3 = second DCA purchase.</p>
+<p class="section-note">План на <strong>{{ month }}</strong> — {{ rows | length }} тикер(а). Неделя 1 = первая покупка, неделя 3 = вторая (DCA).</p>
 <table>
   <thead>
     <tr>
-      <th>Ticker</th>
-      <th class="num">Amount (USD)</th>
-      <th>Week</th>
-      <th class="num">Current %</th>
-      <th class="num">Target %</th>
-      <th class="num">Gap</th>
-      <th>Rationale</th>
+      <th>Тикер</th>
+      <th class="num">Сумма ($)</th>
+      <th>Неделя</th>
+      <th class="num">Факт %</th>
+      <th class="num">Цель %</th>
+      <th class="num">Разрыв</th>
+      <th>Обоснование</th>
       <th></th>
     </tr>
   </thead>
@@ -53,7 +53,7 @@
     <tr class="{{ 'done' if r.executed else '' }}">
       <td><strong>{{ r.ticker }}</strong></td>
       <td class="num">${{ "%.2f" | format(r.amount_usd) }}</td>
-      <td><span class="week">Wk {{ r.week_of_month }}</span></td>
+      <td><span class="week">Нед {{ r.week_of_month }}</span></td>
       <td class="num">{{ "%.1f" | format(r.current_pct) }}%</td>
       <td class="num">{{ "%.1f" | format(r.target_pct) }}%</td>
       <td class="num">+{{ "%.1f" | format(r.deviation_pct) }}%</td>
@@ -61,7 +61,7 @@
       <td>
         {% if not r.executed %}
         <form method="POST" action="/recommend/execute/{{ r.month }}/{{ r.ticker }}" style="margin:0;">
-          <button class="execute-btn" type="submit">✓ Done</button>
+          <button class="execute-btn" type="submit">✓ Куплено</button>
         </form>
         {% else %}
         <span style="color:#22c55e;font-size:0.8rem;">✓</span>
@@ -72,6 +72,6 @@
   </tbody>
 </table>
 {% else %}
-<p class="empty">No recommendations yet — enter your budget and click "Generate plan".</p>
+<p class="empty">Нет рекомендаций — введите бюджет и нажмите «Сформировать план».</p>
 {% endif %}
 {% endblock %}

@@ -1,53 +1,56 @@
 {% extends "base.html" %}
-{% block title %}Settings - Investment Assistant{% endblock %}
+{% block title %}Настройки — Инвестиции{% endblock %}
 
 {% block head %}
 <style>
   h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 1.5rem; }
-  h2 { font-size: 1rem; font-weight: 600; color: #555; text-transform: uppercase; letter-spacing: 0.04em; margin: 2rem 0 0.75rem; }
+  h2 { font-size: 0.82rem; font-weight: 600; color: #999; text-transform: uppercase; letter-spacing: 0.06em; margin: 0 0 1rem; }
   .panel { background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.07); padding: 1.5rem; margin-bottom: 1.5rem; }
-  .field { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.9rem; }
-  .field label { min-width: 200px; font-size: 0.9rem; color: #555; }
-  .field input { border: 1px solid #ddd; border-radius: 6px; padding: 0.4rem 0.75rem; font-size: 0.95rem; width: 120px; }
+  .field { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.85rem; }
+  .field label { min-width: 220px; font-size: 0.9rem; color: #555; }
+  .field input { border: 1px solid #ddd; border-radius: 6px; padding: 0.4rem 0.75rem; font-size: 0.95rem; width: 140px; }
   .field .hint { font-size: 0.78rem; color: #bbb; }
-  .alloc-total { font-size: 0.82rem; color: #888; margin-top: 0.5rem; }
-  button[type=submit] { background: #1a1a2e; color: #fff; border: none; border-radius: 6px; padding: 0.55rem 1.5rem; cursor: pointer; font-size: 0.9rem; margin-top: 0.5rem; }
+  .alloc-sum { font-size: 0.8rem; color: #888; margin-top: 0.25rem; }
+  button[type=submit] { background: #1a1a2e; color: #fff; border: none; border-radius: 6px; padding: 0.55rem 1.5rem; cursor: pointer; font-size: 0.9rem; margin-top: 0.25rem; }
   button[type=submit]:hover { opacity: 0.85; }
 </style>
 {% endblock %}
 
 {% block content %}
-<h1>Settings</h1>
+<h1>Настройки</h1>
 
 <form method="POST" action="/settings">
   <div class="panel">
-    <h2>Target Allocation</h2>
+    <h2>Целевая аллокация</h2>
     {% for ticker in tickers %}
     <div class="field">
       <label>{{ ticker }} (%)</label>
       <input type="number" name="allocation.{{ ticker }}" value="{{ cfg.get('allocation.' + ticker, '') }}" min="0" max="100" step="1">
-      <span class="hint">target weight</span>
+      <span class="hint">целевая доля</span>
     </div>
     {% endfor %}
-    <div class="alloc-total">Sum should equal 100%</div>
+    <div class="alloc-sum">Сумма должна равняться 100%</div>
   </div>
 
   <div class="panel">
-    <h2>Portfolio Goal</h2>
+    <h2>Финансовая цель</h2>
     <div class="field">
-      <label>Monthly budget (USD)</label>
-      <input type="number" name="budget_usd" value="{{ cfg.get('budget_usd', '200') }}" min="1" step="50">
-    </div>
-    <div class="field">
-      <label>Assumed annual return (%)</label>
-      <input type="number" name="assumed_return_pct" value="{{ cfg.get('assumed_return_pct', '8') }}" min="1" max="30" step="0.5">
-    </div>
-    <div class="field">
-      <label>Goal capital (USD)</label>
+      <label>Целевой капитал ($)</label>
       <input type="number" name="goal_usd" value="{{ cfg.get('goal_usd', '1300000') }}" min="1" step="10000">
+      <span class="hint">к 2046 году</span>
+    </div>
+    <div class="field">
+      <label>Месячный взнос ($)</label>
+      <input type="number" name="budget_usd" value="{{ cfg.get('budget_usd', '200') }}" min="1" step="50">
+      <span class="hint">DCA пополнение</span>
+    </div>
+    <div class="field">
+      <label>Ожидаемая доходность (% год)</label>
+      <input type="number" name="assumed_return_pct" value="{{ cfg.get('assumed_return_pct', '8') }}" min="1" max="30" step="0.5">
+      <span class="hint">для прогноза</span>
     </div>
   </div>
 
-  <button type="submit">Save settings</button>
+  <button type="submit">Сохранить</button>
 </form>
 {% endblock %}

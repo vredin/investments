@@ -28,19 +28,18 @@
 <body>
 {% block nav %}
 <nav>
-  <span class="brand">Investment Assistant</span>
-  <a href="/">Dashboard</a>
-  <a href="/portfolio">Portfolio</a>
-  <a href="/recommend">Recommend</a>
-  <a href="/report/{{ now_month | default('2026-05') }}">Report</a>
-  <a href="/settings">Settings</a>
-  <a href="/sync/ibkr">Sync IBKR</a>
-  <a href="/sync/freedom">Sync Freedom</a>
+  <span class="brand">Инвестиции</span>
+  <a href="/">Главная</a>
+  <a href="/portfolio">Портфель</a>
+  <a href="/recommend">Рекомендации</a>
+  <a href="/report/{{ now_month | default('2026-05') }}">Отчёт</a>
+  <a href="/settings">Настройки</a>
+  <a href="/sync/freedom">Синхр. Freedom</a>
   <form method="POST" action="/sync/prices" style="margin:0;">
-    <button type="submit">Sync Prices</button>
+    <button type="submit">Синхр. цены</button>
   </form>
   <form method="POST" action="/logout">
-    <button type="submit">Logout</button>
+    <button type="submit">Выход</button>
   </form>
 </nav>
 {% endblock %}
