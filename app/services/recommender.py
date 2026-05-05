@@ -69,26 +69,31 @@ def _oversold_score(db: Session, ticker: str) -> float:
 
 
 def _llm_rationale(ticker: str, target_pct: float, current_pct: float) -> str:
-    """One-sentence rationale via Claude Sonnet. Falls back to static string on any error."""
+    """One-sentence rationale via OpenRouter. Falls back to static string on any error."""
     try:
-        import anthropic
+        from openai import OpenAI
 
         from app.config import get_settings
 
         settings = get_settings()
-        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        if not settings.OPENROUTER_API_KEY:
+            raise ValueError("OPENROUTER_API_KEY not set")
+        client = OpenAI(
+            api_key=settings.OPENROUTER_API_KEY,
+            base_url="https://openrouter.ai/api/v1",
+            timeout=30,
+        )
         prompt = (
             f"You are a portfolio advisor. Write ONE concise sentence (max 25 words) "
             f"explaining why buying {ticker} makes sense this month. "
             f"Current weight: {current_pct:.1f}%, target: {target_pct:.1f}%."
         )
-        msg = client.messages.create(
-            model="claude-sonnet-4-6",
+        resp = client.chat.completions.create(
+            model="anthropic/claude-sonnet-4-5",
             max_tokens=60,
             messages=[{"role": "user", "content": prompt}],
-            timeout=30,
         )
-        return msg.content[0].text.strip()
+        return resp.choices[0].message.content.strip()
     except Exception as exc:
         logger.warning("LLM rationale failed for %s: %s", ticker, exc)
         return f"Allocation-driven purchase — target {target_pct:.0f}%, current {current_pct:.1f}%."

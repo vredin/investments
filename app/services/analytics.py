@@ -166,15 +166,20 @@ def upsert_snapshot(db: Session, month: str, data: dict) -> ProgressSnapshot:
 
 
 def llm_report_narrative(month: str, data: dict) -> str:
-    """Generate LLM monthly narrative. Falls back to plain text on error."""
+    """Generate LLM monthly narrative via OpenRouter. Falls back to empty string on error."""
     try:
-        import anthropic
+        from openai import OpenAI
 
         from app.config import get_settings
 
         settings = get_settings()
-        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
-
+        if not settings.OPENROUTER_API_KEY:
+            raise ValueError("OPENROUTER_API_KEY not set")
+        client = OpenAI(
+            api_key=settings.OPENROUTER_API_KEY,
+            base_url="https://openrouter.ai/api/v1",
+            timeout=30,
+        )
         signals_str = ", ".join(data["rebalance_signals"]) or "none"
         prompt = (
             f"You are a personal finance advisor. Write a concise 3-sentence portfolio "
@@ -185,13 +190,12 @@ def llm_report_narrative(month: str, data: dict) -> str:
             f"Rebalancing needed: {signals_str}. "
             f"Be encouraging but realistic. Max 60 words."
         )
-        msg = client.messages.create(
-            model="claude-sonnet-4-6",
+        resp = client.chat.completions.create(
+            model="anthropic/claude-sonnet-4-5",
             max_tokens=120,
             messages=[{"role": "user", "content": prompt}],
-            timeout=30,
         )
-        return msg.content[0].text.strip()
+        return resp.choices[0].message.content.strip()
     except Exception as exc:
         logger.warning("LLM report narrative failed for %s: %s", month, exc)
         return ""
