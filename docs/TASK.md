@@ -4,8 +4,6 @@
 
 | ID | Task | Spec | Risk | Started |
 |----|------|------|------|---------|
-| T-004 | Price sync via yfinance (`/sync/prices`, 250d history) | [spec](specs/T-004-price-sync.md) | Medium | 2026-05-05 |
-
 ## Backlog
 
 | ID | Task | Spec | Risk | Created |

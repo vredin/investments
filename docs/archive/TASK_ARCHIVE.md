@@ -7,3 +7,4 @@
 | T-001 | Freedom Finance Excel import (portfolio + trades) | 2026-05-05 | 8eac09a |
 | T-002 | Dashboard summary cards (total value, by broker, last sync) | 2026-05-05 | b123a28 |
 | T-003 | Portfolio page /portfolio (positions + transactions tables) | 2026-05-05 | a1bd936 |
+| T-004 | Price sync via yfinance (/sync/prices, 250d history, 4 target ETFs) | 2026-05-05 | 570ad2a |
