@@ -28,7 +28,7 @@
 
 <form method="POST" action="/recommend" class="form-row">
   <label>Бюджет на месяц ($):
-    <input type="number" name="budget" value="{{ budget | int }}" min="1" step="50" required>
+    <input type="number" name="budget" value="{{ budget | int }}" min="1" step="1" required>
   </label>
   <button type="submit">Сформировать план</button>
 </form>
