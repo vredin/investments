@@ -1,6 +1,129 @@
 {% extends "base.html" %}
-{% block title %}Report - Investment Assistant{% endblock %}
+{% block title %}Report {{ month }} - Investment Assistant{% endblock %}
+
+{% block head %}
+<style>
+  h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 0.25rem; }
+  .month-nav { font-size: 0.85rem; color: #aaa; margin-bottom: 1.5rem; }
+  .month-nav a { color: #555; text-decoration: none; margin-right: 0.5rem; }
+  .month-nav a:hover { text-decoration: underline; }
+  .month-nav .active { font-weight: 700; color: #1a1a2e; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
+  .panel { background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.07); padding: 1.25rem; }
+  .panel h2 { font-size: 0.82rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; }
+  .panel .value { font-size: 1.75rem; font-weight: 700; color: #1a1a1a; }
+  .panel .sub { font-size: 0.8rem; color: #aaa; margin-top: 0.25rem; }
+  .narrative { background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.07); padding: 1.5rem; margin-bottom: 1.5rem; }
+  .narrative h2 { font-size: 0.82rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; }
+  .narrative p { font-size: 0.95rem; line-height: 1.6; color: #444; }
+  .narrative .pending { font-style: italic; color: #aaa; }
+  .alloc-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  .alloc-table th { color: #aaa; font-size: 0.75rem; text-transform: uppercase; padding: 0.3rem 0.4rem; text-align: right; }
+  .alloc-table th:first-child { text-align: left; }
+  .alloc-table td { padding: 0.35rem 0.4rem; text-align: right; border-bottom: 1px solid #f5f5f5; }
+  .alloc-table td:first-child { text-align: left; font-weight: 600; }
+  .gap-red { color: #dc3545; }
+  .gap-green { color: #28a745; }
+  .progress-bar-wrap { background: #eee; border-radius: 99px; height: 10px; margin: 0.5rem 0 0.25rem; overflow: hidden; }
+  .progress-bar { background: linear-gradient(90deg, #1a1a2e, #3b5bdb); height: 100%; border-radius: 99px; }
+  .history-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.07); font-size: 0.88rem; overflow: hidden; }
+  .history-table th { background: #f8f8f8; padding: 0.55rem 0.75rem; text-align: left; font-size: 0.75rem; color: #888; text-transform: uppercase; }
+  .history-table td { padding: 0.55rem 0.75rem; border-bottom: 1px solid #f4f4f4; }
+  .history-table tr:last-child td { border-bottom: none; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+</style>
+{% endblock %}
+
 {% block content %}
-<h1 style="font-size:1.2rem;margin-bottom:1rem;">Monthly Report — {{ month }}</h1>
-<p style="color:#888;font-size:0.9rem;">Monitoring & reporting — Phase 03</p>
+<h1>Monthly Report — {{ month }}</h1>
+
+{% if snapshots %}
+<div class="month-nav">
+  {% for s in snapshots %}
+    <a href="/report/{{ s.month }}" class="{{ 'active' if s.month == month else '' }}">{{ s.month }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if snapshot %}
+<div class="grid">
+  <div class="panel">
+    <h2>Total Capital</h2>
+    <div class="value">${{ "{:,.0f}".format((snapshot.total_capital_usd or 0) | int) }}</div>
+    <div class="sub">Broker: ${{ "{:,.0f}".format((snapshot.broker_capital_usd or 0) | int) }}{% if snapshot.staking_capital_usd %} &middot; Staking: ${{ "{:,.0f}".format((snapshot.staking_capital_usd or 0) | int) }}{% endif %}</div>
+  </div>
+
+  <div class="panel">
+    <h2>Goal Progress</h2>
+    <div class="value">{{ "%.1f"|format(progress_pct) }}%</div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" style="width: {{ progress_pct | round(1) }}%"></div>
+    </div>
+    <div class="sub">${{ "{:,.0f}".format((snapshot.delta_to_goal_usd or 0) | abs | int) }} remaining to ${{ "%.0f"|format(goal_usd / 1000) }}K</div>
+  </div>
+
+  <div class="panel">
+    <h2>Projected 2046</h2>
+    <div class="value">${{ "{:,.0f}".format((snapshot.projected_capital_2046_usd or 0) | int) }}</div>
+    <div class="sub">at current contribution rate</div>
+  </div>
+</div>
+
+<div class="narrative">
+  <h2>Portfolio Commentary</h2>
+  {% if narrative %}
+    <p>{{ narrative }}</p>
+  {% else %}
+    <p class="pending">Commentary not available — LLM service unavailable.</p>
+  {% endif %}
+</div>
+
+<div class="panel" style="margin-bottom: 1.5rem;">
+  <h2>Allocation Detail</h2>
+  <table class="alloc-table">
+    <thead><tr><th>Ticker</th><th class="num">Current %</th><th class="num">Target %</th><th class="num">Gap</th></tr></thead>
+    <tbody>
+      {% for t in target_pct %}
+        {% set cur = current_pct.get(t, 0.0) %}
+        {% set tgt = target_pct.get(t, 0.0) %}
+        {% set gap = tgt - cur %}
+        <tr>
+          <td>{{ t }}</td>
+          <td class="num">{{ "%.1f"|format(cur) }}%</td>
+          <td class="num">{{ "%.1f"|format(tgt) }}%</td>
+          <td class="num {{ 'gap-red' if gap | abs > 5 else 'gap-green' }}">{{ "%+.1f"|format(gap) }}%</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p style="color:#aaa; padding:2rem 0;">No snapshot available for {{ month }}.</p>
+{% endif %}
+
+{% if snapshots and snapshots | length > 1 %}
+<div>
+  <h2 style="font-size:0.82rem; color:#888; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:0.75rem;">Historical Snapshots</h2>
+  <table class="history-table">
+    <thead>
+      <tr>
+        <th>Month</th>
+        <th class="num">Total ($)</th>
+        <th class="num">Projected 2046 ($)</th>
+        <th class="num">Goal %</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in snapshots %}
+      <tr>
+        <td><a href="/report/{{ s.month }}" style="color:#1a1a2e;text-decoration:none;">{{ s.month }}</a></td>
+        <td class="num">${{ "{:,.0f}".format((s.total_capital_usd or 0) | int) }}</td>
+        <td class="num">${{ "{:,.0f}".format((s.projected_capital_2046_usd or 0) | int) }}</td>
+        <td class="num">{{ "%.1f"|format((s.total_capital_usd or 0) / (goal_usd or 1300000) * 100) }}%</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
 {% endblock %}

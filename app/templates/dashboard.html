@@ -1,61 +1,135 @@
 {% extends "base.html" %}
-
 {% block title %}Dashboard - Investment Assistant{% endblock %}
 
 {% block head %}
 <style>
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; margin-bottom: 1.5rem; }
+  .grid-wide { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; margin-bottom: 1.5rem; }
+  @media (max-width: 700px) { .grid-wide { grid-template-columns: 1fr; } }
   .panel { background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); padding: 1.25rem; }
-  .panel h2 { font-size: 0.85rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; }
-  .panel .value { font-size: 1.9rem; font-weight: 700; color: #1a1a1a; }
+  .panel h2 { font-size: 0.82rem; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.75rem; }
+  .panel .value { font-size: 1.85rem; font-weight: 700; color: #1a1a1a; }
   .panel .sub { font-size: 0.8rem; color: #aaa; margin-top: 0.25rem; }
   .broker-list { list-style: none; padding: 0; margin: 0; }
   .broker-list li { display: flex; justify-content: space-between; padding: 0.3rem 0; border-bottom: 1px solid #f0f0f0; font-size: 0.9rem; }
   .broker-list li:last-child { border-bottom: none; }
   .placeholder { color: #aaa; font-size: 0.875rem; text-align: center; padding: 2rem 0; }
   .empty-hint { font-size: 0.8rem; color: #bbb; margin-top: 0.5rem; }
+  .progress-bar-wrap { background: #eee; border-radius: 99px; height: 12px; margin: 0.75rem 0 0.4rem; overflow: hidden; }
+  .progress-bar { background: linear-gradient(90deg, #1a1a2e, #3b5bdb); height: 100%; border-radius: 99px; transition: width 0.4s; }
+  .rebalance-alert { background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 0.65rem 1rem; margin-bottom: 1.25rem; font-size: 0.88rem; color: #856404; }
+  .rebalance-alert strong { font-weight: 700; }
+  .alloc-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-top: 0.5rem; }
+  .alloc-table th { color: #aaa; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 0.3rem 0.4rem; text-align: right; }
+  .alloc-table th:first-child { text-align: left; }
+  .alloc-table td { padding: 0.3rem 0.4rem; text-align: right; border-bottom: 1px solid #f5f5f5; }
+  .alloc-table td:first-child { text-align: left; font-weight: 600; }
+  .alloc-table tr:last-child td { border-bottom: none; }
+  .gap-positive { color: #dc3545; }
+  .gap-ok { color: #28a745; }
+  .donut-wrap { max-width: 200px; margin: 0 auto; }
 </style>
 {% endblock %}
 
 {% block content %}
 {% if last_sync %}
+
+{% if rebalance_signals %}
+<div class="rebalance-alert">
+  <strong>Rebalancing needed:</strong>
+  {% for t in rebalance_signals %}
+    {{ t }} ({{ "%.1f"|format(current_pct.get(t, 0.0)) }}% vs {{ "%.1f"|format(target_pct.get(t, 0.0)) }}% target){% if not loop.last %}, {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
 <div class="grid">
   <div class="panel">
     <h2>Total Portfolio Value</h2>
-    <div class="value">${{ "%.2f"|format(total_value) }}</div>
-    <div class="sub">{{ positions_count }} position{{ 's' if positions_count != 1 else '' }} &mdash; as of {{ last_sync }}</div>
+    <div class="value">${{ "%.2f"|format(total_capital) }}</div>
+    <div class="sub">Broker: ${{ "%.2f"|format(broker_capital) }}{% if staking_capital > 0 %} &middot; Staking: ${{ "%.2f"|format(staking_capital) }}{% endif %}</div>
+    <div class="sub">as of {{ last_sync }}</div>
   </div>
 
   <div class="panel">
-    <h2>By Broker</h2>
-    {% if by_broker %}
-    <ul class="broker-list">
-      {% for broker, value in by_broker.items() | sort(attribute='1', reverse=True) %}
-      <li>
-        <span>{{ broker | upper }}</span>
-        <strong>${{ "%.2f"|format(value) }}</strong>
-      </li>
+    <h2>Progress to Goal (${{ "%.0f"|format(goal_usd / 1000) }}K)</h2>
+    <div class="value">{{ "%.1f"|format(progress_pct) }}%</div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar" style="width: {{ progress_pct | round(1) }}%"></div>
+    </div>
+    <div class="sub">Projected 2046: ${{ "{:,.0f}".format(projection_2046_usd | int) }}</div>
+  </div>
+
+  <div class="panel">
+    <h2>Allocation vs Target</h2>
+    <table class="alloc-table">
+      <thead><tr><th>Ticker</th><th>Current</th><th>Target</th><th>Gap</th></tr></thead>
+      <tbody>
+      {% for t in target_pct %}
+        {% set cur = current_pct.get(t, 0.0) %}
+        {% set tgt = target_pct.get(t, 0.0) %}
+        {% set gap = tgt - cur %}
+        <tr>
+          <td>{{ t }}</td>
+          <td>{{ "%.1f"|format(cur) }}%</td>
+          <td>{{ "%.1f"|format(tgt) }}%</td>
+          <td class="{{ 'gap-positive' if gap | abs > 5 else 'gap-ok' }}">{{ "%+.1f"|format(gap) }}%</td>
+        </tr>
       {% endfor %}
-    </ul>
-    {% else %}
-    <p class="placeholder">No broker data</p>
-    {% endif %}
+      </tbody>
+    </table>
   </div>
 
   <div class="panel">
-    <h2>Performance</h2>
-    <p class="placeholder">Available in Phase 03</p>
-  </div>
-
-  <div class="panel">
-    <h2>Progress to Goal ($1.3M)</h2>
-    <p class="placeholder">Available in Phase 03</p>
+    <h2>Allocation Donut</h2>
+    <div class="donut-wrap">
+      <canvas id="allocChart" height="200"></canvas>
+    </div>
   </div>
 </div>
+
+{% if ext_balances %}
+<div class="panel" style="margin-bottom:1.25rem;">
+  <h2>External Balances</h2>
+  <ul class="broker-list">
+    {% for b in ext_balances %}
+    <li>
+      <span>{{ b.source }} / {{ b.asset }}{% if b.apy_pct %} <small style="color:#aaa">{{ "%.1f"|format(b.apy_pct) }}% APY</small>{% endif %}</span>
+      <strong>${{ "%.2f"|format(b.amount_usd or 0) }}</strong>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+<script>
+(function() {
+  var labels = {{ donut_labels_json | safe }};
+  var current = {{ donut_current_json | safe }};
+  var target = {{ donut_target_json | safe }};
+  var colors = ['#3b5bdb','#20c997','#f59f00','#fa5252','#adb5bd','#74c0fc'];
+  var ctx = document.getElementById('allocChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'Current', data: current, backgroundColor: colors, borderWidth: 2 },
+        { label: 'Target', data: target, backgroundColor: colors.map(c => c + '55'), borderWidth: 1 }
+      ]
+    },
+    options: {
+      plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12, padding: 8 } } },
+      cutout: '55%'
+    }
+  });
+})();
+</script>
+
 {% else %}
 <div style="text-align:center; padding: 4rem 1rem; color: #aaa;">
   <p style="font-size:1.1rem;">No positions found.</p>
-  <p class="empty-hint">Sync data from <a href="/sync/ibkr">IBKR</a> or <a href="/sync/freedom">Freedom Finance</a> to get started.</p>
+  <p class="empty-hint">Sync data from <a href="/sync/freedom">Freedom Finance</a> to get started.</p>
 </div>
 {% endif %}
 {% endblock %}
