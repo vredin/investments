@@ -1,26 +1,25 @@
-# Session Handoff — 2026-05-05
+# Session Handoff — 2026-05-06
 
 ## Completed This Session
-- T-005: Monthly buy recommender — done, committed 89e93f5, deployed
-- T-006: Analytics dashboard — done, committed 47c1a66, deployed
+- T-007: Playwright E2E тесты (41 pass, 1 skip) — коммиты 9a426bf..29fd719
+- T-008: LLM обоснование на русском + сброс executed при перегенерации — e45c9e5
+- T-009: Кнопка "Купить" вместо "✓ Куплено" — b3d4e7d
+- Очищены старые английские записи из БД (DELETE FROM recommendations WHERE month='2026-05')
+- Спеки T-010..T-015 + GitHub issues #10..#15 — a767f16
 
 ## In Progress (not finished)
-None — both tasks fully complete, deployed, archived, GitHub issues closed.
+- Ничего. T-010..T-015 все в Backlog.
 
 ## Next Session Should
-1. Check https://money.semishan.pro in browser — verify dashboard donut chart renders, /report/2026-05 loads with LLM narrative
-2. If ANTHROPIC_API_KEY not set on server (check: ssh vps3 "grep ANTHROPIC /opt/Investments/.env"), add it so LLM features work in prod
-3. Plan next phase — check gh issue list --state open for new backlog items
+1. Реализовать T-010 (ⓘ-tooltip глоссарий) — CSS в base.html + разметка в 3 шаблонах
+2. Реализовать T-011 (онбординг empty state) — только dashboard.html, если total_capital==0
+3. Реализовать T-015 (анализ тикера) — новый сервис ticker_analysis.py + роутер + шаблон
 
 ## Context That Would Be Lost
-- T-005 test fix: test_llm_fallback_on_exception patches app.config.get_settings (not app.services.recommender.anthropic) because anthropic is lazy-imported inside function body — module-level patch fails for lazy imports
-- T-006 FV formula: fv_projection(0, 200, 8.0, 240) = ~$117K (not $589K) — correct math for $200/mo at 8%/yr over 20 years
-- analytics.compute_dashboard_data uses quantity*latest_price if price data exists, falls back to market_value_usd
-- upsert_snapshot calls db.commit() internally — report route does not need extra commit
-- Dashboard template no longer uses positions_count or by_broker — replaced by analytics service context
+- БД на VPS: рекомендации за 2026-05 удалены — пользователь должен нажать "Сформировать план" для получения русских обоснований
+- Концепция продукта: пользователь без опыта инвестирования, планирует жить на дивиденды и передать активы сыну — одна цель, не нужны "множественные цели"
+- E2E тесты: Playwright deps установлены вручную внутри контейнера (не в Dockerfile) — при rebuild нужно переустановить: python3 -m playwright install-deps chromium && python3 -m playwright install chromium
+- Пользователь использует Freedom Finance + yfinance. OPENROUTER_API_KEY уже в .env на VPS. Anthropic key НЕ используется.
 
 ## User's Last Unanswered Question
-None — user's last message was implementing T-005 and T-006, both now complete.
-
-## Open Questions for User
-- ANTHROPIC_API_KEY on VPS: needed for LLM rationale (recommender) + narrative (report). Both fall back silently if missing.
+- Нет открытых вопросов. Последнее действие: создание 6 задач (T-010..T-015) по результатам brainstorming-анализа системы с позиции новичка.
