@@ -34,16 +34,16 @@
 </form>
 
 {% if rows %}
-<p class="section-note">План на <strong>{{ month }}</strong> — {{ rows | length }} тикер(а). Неделя 1 = первая покупка, неделя 3 = вторая (DCA).</p>
+<p class="section-note">План на <strong>{{ month }}</strong> — {{ rows | length }} тикер(а). Неделя 1 = первая покупка, неделя 3 = вторая (<span class="term" data-tip="Dollar Cost Averaging — регулярные покупки фиксированной суммой независимо от цены. Усредняет стоимость входа.">DCA ⓘ</span>).</p>
 <table>
   <thead>
     <tr>
       <th>Тикер</th>
       <th class="num">Сумма ($)</th>
       <th>Неделя</th>
-      <th class="num">Факт %</th>
-      <th class="num">Цель %</th>
-      <th class="num">Разрыв</th>
+      <th class="num"><span class="term" data-tip="Текущая доля этого актива в портфеле по рыночной стоимости.">Факт % ⓘ</span></th>
+      <th class="num"><span class="term" data-tip="Желаемая доля, заданная вами в Настройках.">Цель % ⓘ</span></th>
+      <th class="num"><span class="term" data-tip="Разрыв = Цель − Факт. Положительное число означает, что актив недопредставлен в портфеле.">Разрыв ⓘ</span></th>
       <th>Обоснование</th>
       <th></th>
     </tr>

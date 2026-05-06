@@ -39,7 +39,7 @@
 
 {% if rebalance_signals %}
 <div class="rebalance-alert">
-  <strong>Требуется ребалансировка:</strong>
+  <strong><span class="term" data-tip="Ребалансировка — приведение долей к целевым значениям. Не продажа, а перераспределение новых взносов.">Требуется ребалансировка ⓘ</span>:</strong>
   {% for t in rebalance_signals %}
     {{ t }} ({{ "%.1f"|format(current_pct.get(t, 0.0)) }}% → цель {{ "%.1f"|format(target_pct.get(t, 0.0)) }}%){% if not loop.last %}, {% endif %}
   {% endfor %}
@@ -70,7 +70,7 @@
   <div class="panel">
     <h2>Аллокация vs цель</h2>
     <table class="alloc-table">
-      <thead><tr><th>Тикер</th><th>Факт</th><th>Цель</th><th>Разрыв</th></tr></thead>
+      <thead><tr><th>Тикер</th><th><span class="term" data-tip="Текущая доля по рыночной стоимости.">Факт ⓘ</span></th><th><span class="term" data-tip="Желаемая доля из Настроек.">Цель ⓘ</span></th><th><span class="term" data-tip="Отклонение от цели. Красный = более 5 пп.">Разрыв ⓘ</span></th></tr></thead>
       <tbody>
       {% for t in target_pct %}
         {% set cur = current_pct.get(t, 0.0) %}
