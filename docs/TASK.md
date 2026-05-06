@@ -9,7 +9,6 @@
 
 | ID | Task | Spec | Risk | Created |
 |----|------|------|------|---------|
-| T-014 | Риск-профиль: 3 вопроса → рекомендованная аллокация | [spec](specs/T-014-risk-profile.md) | Low | 2026-05-06 |
 | T-015 | Анализ произвольного тикера: yfinance + LLM на русском | [spec](specs/T-015-ticker-analysis.md) | Medium | 2026-05-06 |
 
 ---
