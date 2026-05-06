@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Анализ тикера — Инвестиции{% endblock %}
+
+{% block head %}
+<style>
+  h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 1.5rem; }
+  .search-row { display: flex; gap: .75rem; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .search-row input { border: 1px solid #ddd; border-radius: 6px; padding: .45rem .75rem; font-size: 1rem; width: 200px; text-transform: uppercase; }
+  .search-row button { background: #1a1a2e; color: #fff; border: none; border-radius: 6px; padding: .5rem 1.25rem; cursor: pointer; font-size: .9rem; }
+  .search-row button:hover { opacity: .85; }
+  .search-row .hint { font-size: .78rem; color: #aaa; }
+  .error-msg { background: #fef2f2; border: 1px solid #fca5a5; border-radius: 6px; padding: .75rem 1rem; color: #991b1b; font-size: .9rem; margin-bottom: 1rem; }
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.25rem; }
+  @media(max-width: 700px) { .metrics { grid-template-columns: 1fr 1fr; } }
+  @media(max-width: 400px) { .metrics { grid-template-columns: 1fr; } }
+  .metric-card { background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); padding: 1rem; }
+  .metric-card .label { font-size: .72rem; color: #aaa; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .3rem; }
+  .metric-card .value { font-size: 1.4rem; font-weight: 700; color: #1a1a2e; }
+  .metric-card .sub { font-size: .75rem; color: #888; margin-top: .2rem; }
+  .pos { color: #16a34a; } .neg { color: #dc2626; }
+  .analysis-panel { background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); padding: 1.5rem; margin-bottom: 1.25rem; }
+  .analysis-panel h2 { font-size: .82rem; color: #999; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 1rem; }
+  .analysis-text { font-size: .92rem; line-height: 1.7; color: #333; white-space: pre-wrap; }
+  .no-analysis { font-size: .85rem; color: #aaa; font-style: italic; }
+  .ticker-header { font-size: 1rem; font-weight: 600; color: #555; margin-bottom: .25rem; }
+  .ticker-name { font-size: .85rem; color: #888; margin-bottom: 1.25rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Анализ тикера</h1>
+
+<form method="POST" action="/analyze" class="search-row">
+  <input type="text" name="ticker" placeholder="MSFT, GLD, VWCE.AS…"
+         value="{{ submitted_ticker or '' }}" maxlength="20" required autocomplete="off">
+  <button type="submit">Анализировать</button>
+  <span class="hint">Для европейских ETF добавьте биржу: VWCE.AS (Амстердам)</span>
+</form>
+
+{% if error %}
+<div class="error-msg">{{ error }}</div>
+{% endif %}
+
+{% if ticker_data %}
+<div class="ticker-header">{{ ticker_data.ticker }}</div>
+<div class="ticker-name">{{ ticker_data.name }}{% if ticker_data.currency %} · {{ ticker_data.currency }}{% endif %}</div>
+
+<div class="metrics">
+  <div class="metric-card">
+    <div class="label">Текущая цена</div>
+    <div class="value">{{ ticker_data.current_price }}</div>
+    <div class="sub">{{ ticker_data.currency }}</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">Доходность за год</div>
+    <div class="value {{ 'pos' if ticker_data.ytd_return_pct >= 0 else 'neg' }}">
+      {{ "%+.1f"|format(ticker_data.ytd_return_pct) }}%
+    </div>
+    <div class="sub">YTD</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">Просадка от максимума</div>
+    <div class="value {{ 'neg' if ticker_data.drawdown_from_peak < 0 else 'pos' }}">
+      {{ "%.1f"|format(ticker_data.drawdown_from_peak) }}%
+    </div>
+    <div class="sub">от 52w max {{ ticker_data.peak_52w }}</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">Волатильность</div>
+    <div class="value">{{ ticker_data.volatility_pct }}%</div>
+    <div class="sub">годовая (annualized)</div>
+  </div>
+</div>
+
+<div class="analysis-panel">
+  <div style="display:flex;gap:.5rem;margin-bottom:.75rem;font-size:.78rem;color:#888;">
+    <span>52w: {{ ticker_data.trough_52w }} — {{ ticker_data.peak_52w }}</span>
+    {% if ticker_data.expense_ratio %}<span>· TER {{ "%.2f"|format(ticker_data.expense_ratio * 100) }}%</span>{% endif %}
+  </div>
+  <h2>Анализ</h2>
+  {% if analysis %}
+  <div class="analysis-text">{{ analysis }}</div>
+  {% else %}
+  <div class="no-analysis">LLM-анализ временно недоступен. Метрики выше актуальны.</div>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}
