@@ -9,6 +9,7 @@
 
 | ID | Task | Spec | Risk | Created |
 |----|------|------|------|---------|
+| T-009 | Recommend: кнопка "Купить" вместо "✓ Куплено" (action vs status) | [spec](specs/T-009-recommend-button-ux.md) | Low | 2026-05-06 |
 
 ---
 
