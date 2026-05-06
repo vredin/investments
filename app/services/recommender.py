@@ -84,9 +84,9 @@ def _llm_rationale(ticker: str, target_pct: float, current_pct: float) -> str:
             timeout=30,
         )
         prompt = (
-            f"You are a portfolio advisor. Write ONE concise sentence (max 25 words) "
-            f"explaining why buying {ticker} makes sense this month. "
-            f"Current weight: {current_pct:.1f}%, target: {target_pct:.1f}%."
+            f"Ты портфельный советник. Напиши ОДНО краткое предложение (макс. 25 слов) на русском языке, "
+            f"объясняющее почему стоит купить {ticker} в этом месяце. "
+            f"Текущая доля: {current_pct:.1f}%, целевая: {target_pct:.1f}%."
         )
         resp = client.chat.completions.create(
             model="anthropic/claude-sonnet-4-5",
@@ -96,7 +96,7 @@ def _llm_rationale(ticker: str, target_pct: float, current_pct: float) -> str:
         return resp.choices[0].message.content.strip()
     except Exception as exc:
         logger.warning("LLM rationale failed for %s: %s", ticker, exc)
-        return f"Allocation-driven purchase — target {target_pct:.0f}%, current {current_pct:.1f}%."
+        return f"Покупка по распределению — цель {target_pct:.0f}%, факт {current_pct:.1f}%."
 
 
 def generate_buy_plan(budget_usd: float, db: Session) -> list[BuyRow]:
@@ -165,6 +165,7 @@ def upsert_recommendations(db: Session, month: str, rows: list[BuyRow]) -> None:
             "amount_usd": stmt.excluded.amount_usd,
             "week_of_month": stmt.excluded.week_of_month,
             "rationale": stmt.excluded.rationale,
+            "executed": stmt.excluded.executed,
         },
     )
     db.execute(stmt)

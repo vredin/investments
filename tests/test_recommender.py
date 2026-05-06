@@ -123,4 +123,4 @@ def test_llm_fallback_on_exception():
     with patch("app.config.get_settings", side_effect=Exception("no API key")):
         result = _llm_rationale("VWCE", 65.0, 0.0)
     assert "65" in result
-    assert "Allocation" in result
+    assert "распределению" in result
