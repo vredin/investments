@@ -7,6 +7,7 @@ from tests.e2e.conftest import (
     _expired_auth_cookie,
     _forged_auth_cookie,
     requires_e2e,
+    requires_known_password,
 )
 
 pytestmark = [requires_e2e, pytest.mark.e2e]
@@ -26,6 +27,7 @@ def test_login_page_renders(anon_page, live_server):
     anon_page.wait_for_selector("input[type=password]")
 
 
+@requires_known_password
 def test_login_valid_password_redirects_to_dashboard(anon_page, live_server):
     anon_page.goto(f"{live_server}/login")
     anon_page.fill("input[name=password]", TEST_PASSWORD)

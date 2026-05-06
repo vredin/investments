@@ -66,6 +66,12 @@ def _e2e_available() -> bool:
     return _db_available()
 
 
+# Skip login-with-password tests when using a remote server without E2E_PASSWORD set.
+requires_known_password = pytest.mark.skipif(
+    bool(_REMOTE_URL) and not os.environ.get("E2E_PASSWORD"),
+    reason="Set E2E_PASSWORD to the real admin password when using E2E_BASE_URL",
+)
+
 requires_e2e = pytest.mark.skipif(
     not _e2e_available(),
     reason=(
