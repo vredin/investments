@@ -221,9 +221,86 @@
 </script>
 
 {% else %}
-<div class="empty-state">
-  <p>Позиций не найдено.</p>
-  <p><a href="/sync/freedom">Синхронизировать Freedom Finance</a> для начала работы.</p>
+<style>
+  .onboard { background:#fff; border-radius:10px; box-shadow:0 1px 8px rgba(0,0,0,0.08); padding:2rem; max-width:720px; margin:2rem auto; }
+  .onboard h1 { font-size:1.35rem; font-weight:700; margin-bottom:.5rem; color:#1a1a2e; }
+  .onboard .lead { color:#666; font-size:.95rem; margin-bottom:2rem; }
+  .steps { display:flex; flex-direction:column; gap:1.25rem; margin-bottom:2rem; }
+  .step { display:flex; gap:1rem; align-items:flex-start; }
+  .step-num { background:#1a1a2e; color:#fff; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-size:.9rem; font-weight:700; flex-shrink:0; }
+  .step-body h3 { font-size:.95rem; font-weight:600; margin-bottom:.25rem; }
+  .step-body p { font-size:.85rem; color:#666; margin-bottom:.4rem; }
+  .step-body a { color:#3b5bdb; font-size:.85rem; }
+  .etfs { border-top:1px solid #f0f0f0; padding-top:1.5rem; }
+  .etfs h2 { font-size:.82rem; color:#999; text-transform:uppercase; letter-spacing:.06em; margin-bottom:1rem; }
+  .etf-grid { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; }
+  @media(max-width:500px){.etf-grid{grid-template-columns:1fr;}}
+  .etf-card { background:#f8f9fa; border-radius:8px; padding:.9rem 1rem; }
+  .etf-card .ticker { font-size:1rem; font-weight:700; color:#1a1a2e; }
+  .etf-card .name { font-size:.78rem; color:#888; margin:.1rem 0 .4rem; }
+  .etf-card .desc { font-size:.82rem; color:#444; line-height:1.45; }
+  .etf-card .ter { font-size:.72rem; color:#aaa; margin-top:.35rem; }
+</style>
+<div class="onboard">
+  <h1>Добро пожаловать в Investment Assistant</h1>
+  <p class="lead">Система помогает копить на долгосрочные финансовые цели через регулярные покупки ETF.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <h3>Задайте цель и бюджет</h3>
+        <p>Укажите, сколько хотите накопить и сколько можете откладывать каждый месяц.</p>
+        <a href="/settings">Открыть Настройки →</a>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <h3>Подключите данные брокера</h3>
+        <p>Экспортируйте отчёт из Freedom Finance (Excel) и загрузите его. Позиции появятся автоматически.</p>
+        <a href="/sync/freedom">Синхронизировать Freedom Finance →</a>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <h3>Следуйте ежемесячному плану</h3>
+        <p>Система скажет, что купить и на какую сумму. После покупки нажмите «Купить» — прогресс обновится.</p>
+        <a href="/recommend">Перейти к Рекомендациям →</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="etfs">
+    <h2>Что мы рекомендуем покупать</h2>
+    <div class="etf-grid">
+      <div class="etf-card">
+        <div class="ticker">VWCE</div>
+        <div class="name">Vanguard FTSE All-World</div>
+        <div class="desc">~3 500 компаний из 50 стран. Ваши деньги растут вместе с мировой экономикой.</div>
+        <div class="ter">TER 0.22%</div>
+      </div>
+      <div class="etf-card">
+        <div class="ticker">VEUR</div>
+        <div class="name">Vanguard FTSE Developed Europe</div>
+        <div class="desc">~600 европейских компаний. Европейский противовес к мировому рынку.</div>
+        <div class="ter">TER 0.10%</div>
+      </div>
+      <div class="etf-card">
+        <div class="ticker">AGGH</div>
+        <div class="name">iShares Global Aggregate Bond</div>
+        <div class="desc">Облигации компаний и правительств. Снижает волатильность в кризис.</div>
+        <div class="ter">TER 0.10%</div>
+      </div>
+      <div class="etf-card">
+        <div class="ticker">XEON</div>
+        <div class="name">Xtrackers EUR Overnight Rate Swap</div>
+        <div class="desc">Краткосрочный резерв в EUR. Аналог «кэша» — защищает от просадок.</div>
+        <div class="ter">TER 0.10%</div>
+      </div>
+    </div>
+  </div>
 </div>
 {% endif %}
 {% endblock %}
