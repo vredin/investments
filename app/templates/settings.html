@@ -53,4 +53,112 @@
 
   <button type="submit">Сохранить</button>
 </form>
+
+{# Риск-профиль — JS-only #}
+<div class="panel" style="margin-top:1.5rem;">
+  <h2>Риск-профиль</h2>
+  <style>
+    .rp-field { display:flex; flex-direction:column; gap:.4rem; margin-bottom:1.1rem; }
+    .rp-field label { font-size:.88rem; color:#555; font-weight:500; }
+    .rp-field select { border:1px solid #ddd; border-radius:6px; padding:.4rem .75rem; font-size:.88rem; max-width:380px; }
+    .rp-result { display:none; background:#f0fdf4; border:1px solid #86efac; border-radius:8px; padding:1rem 1.25rem; margin-top:1rem; }
+    .rp-result .profile-name { font-size:1.1rem; font-weight:700; color:#166534; }
+    .rp-result .profile-desc { font-size:.85rem; color:#166534; margin:.3rem 0 .75rem; }
+    .rp-alloc { display:grid; grid-template-columns:repeat(4,1fr); gap:.5rem; margin-bottom:.75rem; }
+    @media(max-width:500px){.rp-alloc{grid-template-columns:1fr 1fr;}}
+    .rp-alloc-item { background:#fff; border-radius:6px; padding:.5rem .75rem; text-align:center; }
+    .rp-alloc-item .ticker { font-size:.85rem; font-weight:700; color:#1a1a2e; }
+    .rp-alloc-item .pct { font-size:1.1rem; font-weight:700; color:#3b5bdb; }
+    .apply-btn { background:#1a1a2e; color:#fff; border:none; border-radius:6px; padding:.45rem 1.2rem; font-size:.85rem; cursor:pointer; }
+    .apply-btn:hover { opacity:.85; }
+  </style>
+  <p style="font-size:.85rem;color:#888;margin-bottom:1rem;">Ответьте на 3 вопроса — получите рекомендованную аллокацию.</p>
+  <div class="rp-field">
+    <label>Горизонт инвестирования</label>
+    <select id="rp-horizon">
+      <option value="">— выберите —</option>
+      <option value="short">Менее 10 лет</option>
+      <option value="mid">10–15 лет</option>
+      <option value="long">Более 15 лет</option>
+    </select>
+  </div>
+  <div class="rp-field">
+    <label>Если рынок упадёт на 30%, вы:</label>
+    <select id="rp-panic">
+      <option value="">— выберите —</option>
+      <option value="sell">Продам — нельзя терять такие деньги</option>
+      <option value="wait">Подожду восстановления</option>
+      <option value="buy">Куплю ещё — отличная цена</option>
+    </select>
+  </div>
+  <div class="rp-field">
+    <label>Есть ли у вас другие источники дохода / подушка безопасности?</label>
+    <select id="rp-income">
+      <option value="">— выберите —</option>
+      <option value="no">Нет, только этот портфель</option>
+      <option value="yes">Да, есть стабильный доход / резерв</option>
+    </select>
+  </div>
+  <div class="rp-result" id="rp-result">
+    <div class="profile-name" id="rp-name"></div>
+    <div class="profile-desc" id="rp-desc"></div>
+    <div class="rp-alloc" id="rp-alloc"></div>
+    <button class="apply-btn" onclick="rpApply()">Применить к настройкам</button>
+    <p style="font-size:.75rem;color:#888;margin-top:.5rem;">После нажатия заполнит поля выше — нужно нажать «Сохранить».</p>
+  </div>
+</div>
+
+<script>
+(function() {
+  var profiles = {
+    conservative: {
+      name: 'Conservative — Консервативный',
+      desc: 'Подходит для короткого горизонта или тех, кто плохо переносит просадки.',
+      alloc: { 'VWCE': 40, 'VEUR': 10, 'AGGH': 40, 'XEON': 10 }
+    },
+    balanced: {
+      name: 'Balanced — Сбалансированный',
+      desc: 'Баланс роста и стабильности для горизонта 10–15 лет.',
+      alloc: { 'VWCE': 55, 'VEUR': 15, 'AGGH': 25, 'XEON': 5 }
+    },
+    growth: {
+      name: 'Growth — Агрессивный рост',
+      desc: 'Максимальный потенциал роста для горизонта 15+ лет.',
+      alloc: { 'VWCE': 65, 'VEUR': 20, 'AGGH': 10, 'XEON': 5 }
+    }
+  };
+  var currentAlloc = null;
+  function recommend(horizon, panic, income) {
+    if (horizon === 'short' || panic === 'sell' || income === 'no') return 'conservative';
+    if (horizon === 'long' && panic === 'buy') return 'growth';
+    return 'balanced';
+  }
+  function update() {
+    var h = document.getElementById('rp-horizon').value;
+    var p = document.getElementById('rp-panic').value;
+    var i = document.getElementById('rp-income').value;
+    if (!h || !p || !i) { document.getElementById('rp-result').style.display = 'none'; return; }
+    var key = recommend(h, p, i);
+    var prof = profiles[key];
+    currentAlloc = prof.alloc;
+    document.getElementById('rp-name').textContent = prof.name;
+    document.getElementById('rp-desc').textContent = prof.desc;
+    var allocEl = document.getElementById('rp-alloc');
+    allocEl.innerHTML = Object.entries(prof.alloc).map(function(e) {
+      return '<div class="rp-alloc-item"><div class="ticker">' + e[0] + '</div><div class="pct">' + e[1] + '%</div></div>';
+    }).join('');
+    document.getElementById('rp-result').style.display = 'block';
+  }
+  ['rp-horizon','rp-panic','rp-income'].forEach(function(id) {
+    document.getElementById(id).addEventListener('change', update);
+  });
+  window.rpApply = function() {
+    if (!currentAlloc) return;
+    Object.entries(currentAlloc).forEach(function(e) {
+      var input = document.querySelector('input[name="allocation.' + e[0] + '"]');
+      if (input) input.value = e[1];
+    });
+  };
+})();
+</script>
 {% endblock %}
