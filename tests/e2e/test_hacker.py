@@ -231,3 +231,128 @@ def test_login_error_no_hash_disclosure(anon_page, live_server):
     content = anon_page.content()
     assert "$2b$" not in content  # bcrypt hash
     assert "secret" not in content.lower() or "SECRET_KEY" not in content
+
+
+# ---------------------------------------------------------------------------
+# T-015: /analyze — auth bypass & injection
+# ---------------------------------------------------------------------------
+
+def test_analyze_unauthenticated_redirects(live_server):
+    """GET /analyze without auth must redirect to /login."""
+    r = httpx.get(f"{live_server}/analyze", follow_redirects=False, timeout=5)
+    assert r.status_code in (302, 307)
+    assert "login" in r.headers.get("location", "").lower()
+
+
+def test_analyze_post_unauthenticated_redirects(live_server):
+    """POST /analyze without auth must redirect, not process ticker."""
+    r = httpx.post(
+        f"{live_server}/analyze",
+        data={"ticker": "AAPL"},
+        follow_redirects=False,
+        timeout=5,
+    )
+    assert r.status_code in (302, 307)
+    assert "login" in r.headers.get("location", "").lower()
+
+
+def test_analyze_xss_ticker_rejected(live_server):
+    """XSS payload in ticker field must not appear unescaped in response."""
+    payload = "<script>alert(1)</script>"
+    with _client(live_server) as c:
+        r = c.post("/analyze", data={"ticker": payload})
+    assert r.status_code != 500
+    if r.status_code == 200:
+        assert payload not in r.text
+
+
+def test_analyze_long_ticker_no_500(live_server):
+    """Ticker longer than 20 chars must be rejected gracefully, not crash."""
+    with _client(live_server) as c:
+        r = c.post("/analyze", data={"ticker": "A" * 50})
+    assert r.status_code != 500
+    if r.status_code == 200:
+        assert "Traceback" not in r.text
+
+
+def test_analyze_sql_injection_ticker_no_500(live_server):
+    """SQL injection payload as ticker must not crash or leak DB errors."""
+    with _client(live_server) as c:
+        r = c.post("/analyze", data={"ticker": "'; DROP TABLE positions; --"})
+    assert r.status_code != 500
+    assert "Traceback" not in r.text
+
+
+def test_analyze_null_bytes_ticker_no_500(live_server):
+    """Null bytes and control chars in ticker must not crash."""
+    with _client(live_server) as c:
+        r = c.post("/analyze", data={"ticker": "ABC\x00DEF"})
+    assert r.status_code != 500
+
+
+# ---------------------------------------------------------------------------
+# T-013: /crisis — auth bypass
+# ---------------------------------------------------------------------------
+
+def test_crisis_unauthenticated_redirects(live_server):
+    """GET /crisis without auth must redirect to /login."""
+    r = httpx.get(f"{live_server}/crisis", follow_redirects=False, timeout=5)
+    assert r.status_code in (302, 307)
+    assert "login" in r.headers.get("location", "").lower()
+
+
+# ---------------------------------------------------------------------------
+# T-012: /api/scenario — auth bypass & boundary values
+# ---------------------------------------------------------------------------
+
+def test_scenario_unauthenticated_redirects(live_server):
+    """GET /api/scenario without auth must redirect to /login."""
+    r = httpx.get(
+        f"{live_server}/api/scenario?budget=200&return_pct=8&years=20",
+        follow_redirects=False,
+        timeout=5,
+    )
+    assert r.status_code in (302, 307)
+    assert "login" in r.headers.get("location", "").lower()
+
+
+def test_scenario_budget_over_limit_rejected(live_server):
+    """budget > 100_000 must return 422 (FastAPI Query ge/le validation)."""
+    with _client(live_server) as c:
+        r = c.get("/api/scenario?budget=200000&return_pct=8&years=20")
+    assert r.status_code == 422
+
+
+def test_scenario_years_over_limit_rejected(live_server):
+    """years > 50 must return 422."""
+    with _client(live_server) as c:
+        r = c.get("/api/scenario?budget=200&return_pct=8&years=100")
+    assert r.status_code == 422
+
+
+def test_scenario_negative_budget_rejected(live_server):
+    """budget < 0 must return 422 (ge=0 constraint)."""
+    with _client(live_server) as c:
+        r = c.get("/api/scenario?budget=-100&return_pct=8&years=20")
+    assert r.status_code == 422
+
+
+def test_scenario_zero_budget_returns_result(live_server):
+    """budget=0 is valid (ge=0) — linear growth, must return 200 with fv."""
+    import json
+    with _client(live_server) as c:
+        r = c.get("/api/scenario?budget=0&return_pct=8&years=20")
+    assert r.status_code == 200
+    data = json.loads(r.text)
+    assert "fv" in data
+    assert data["fv"] >= 0
+
+
+def test_scenario_zero_return_returns_result(live_server):
+    """return_pct=0 is valid — linear PMT growth only, no crash."""
+    import json
+    with _client(live_server) as c:
+        r = c.get("/api/scenario?budget=200&return_pct=0&years=20")
+    assert r.status_code == 200
+    data = json.loads(r.text)
+    assert "fv" in data

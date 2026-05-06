@@ -12,7 +12,8 @@ def test_dashboard_renders(auth_page, live_server):
     assert resp.status == 200
     content = auth_page.content()
     assert "500" not in auth_page.title()
-    assert any(kw in content for kw in ["Портфель", "Позиций не найдено", "Главная"])
+    # Empty DB shows onboarding (T-011); populated DB shows portfolio panels
+    assert any(kw in content for kw in ["Портфель", "Добро пожаловать", "Шаг 1", "Главная"])
 
 
 def test_dashboard_no_500_on_empty_db(auth_page, live_server):
@@ -107,3 +108,87 @@ def test_nav_links_visible(auth_page, live_server):
     assert "Портфель" in content
     assert "Рекомендации" in content
     assert "Настройки" in content
+    assert "Анализ тикера" in content  # added in T-015
+
+
+# ---------------------------------------------------------------------------
+# T-013: /crisis page
+# ---------------------------------------------------------------------------
+
+def test_crisis_page_renders(auth_page, live_server):
+    resp = auth_page.goto(f"{live_server}/crisis")
+    assert resp.status == 200
+    content = auth_page.content()
+    assert "Internal Server Error" not in content
+    assert any(kw in content.lower() for kw in ["рынок", "просадк", "кризис"])
+
+
+# ---------------------------------------------------------------------------
+# T-015: /analyze page
+# ---------------------------------------------------------------------------
+
+def test_analyze_page_renders(auth_page, live_server):
+    resp = auth_page.goto(f"{live_server}/analyze")
+    assert resp.status == 200
+    assert "Internal Server Error" not in auth_page.content()
+    assert auth_page.locator("input[name=ticker]").is_visible()
+
+
+def test_analyze_invalid_ticker_shows_error(auth_page, live_server):
+    """Non-existent ticker must show user-friendly error, not 500."""
+    auth_page.goto(f"{live_server}/analyze")
+    auth_page.fill("input[name=ticker]", "XYZXYZ123FAKE")
+    auth_page.click("button[type=submit]")
+    auth_page.wait_for_load_state("networkidle")
+    content = auth_page.content()
+    assert "Internal Server Error" not in content
+    assert "500" not in auth_page.title()
+    assert any(kw in content for kw in ["не найден", "Тикер", "не найдено"])
+
+
+# ---------------------------------------------------------------------------
+# T-012: /api/scenario endpoint
+# ---------------------------------------------------------------------------
+
+def test_scenario_api_returns_json(auth_page, live_server):
+    """GET /api/scenario must return JSON with fv/delta/goal_pct fields."""
+    auth_page.goto(f"{live_server}/")  # establish auth context
+    result = auth_page.evaluate("""async () => {
+        const r = await fetch('/api/scenario?budget=200&return_pct=8&years=20');
+        return await r.json();
+    }""")
+    assert isinstance(result, dict), f"Expected dict, got {type(result)}"
+    assert "fv" in result
+    assert "delta" in result
+    assert "goal_pct" in result
+    assert result["fv"] > 0
+
+
+# ---------------------------------------------------------------------------
+# T-014: Risk profile section in settings
+# ---------------------------------------------------------------------------
+
+def test_settings_has_risk_profile_section(auth_page, live_server):
+    """Settings page must contain the 3 risk-profile select elements."""
+    auth_page.goto(f"{live_server}/settings")
+    assert auth_page.locator("select#rp-horizon").count() == 1
+    assert auth_page.locator("select#rp-panic").count() == 1
+    assert auth_page.locator("select#rp-income").count() == 1
+
+
+# ---------------------------------------------------------------------------
+# T-010: Tooltip CSS system
+# ---------------------------------------------------------------------------
+
+def test_tooltip_css_loaded_on_pages(auth_page, live_server):
+    """CSS .term tooltip class must be present in base.html on all pages."""
+    for path in ["/", "/recommend", "/settings", "/analyze"]:
+        auth_page.goto(f"{live_server}{path}")
+        content = auth_page.content()
+        assert "cursor: help" in content, f"Tooltip CSS missing on {path}"
+
+
+def test_tooltips_visible_on_settings(auth_page, live_server):
+    """/settings always renders .term elements (alloc header, DCA, return rate)."""
+    auth_page.goto(f"{live_server}/settings")
+    assert auth_page.locator(".term").count() > 0
