@@ -63,7 +63,7 @@
       <td>
         {% if not r.executed %}
         <form method="POST" action="/recommend/execute/{{ r.month }}/{{ r.ticker }}" style="margin:0;">
-          <button class="execute-btn" type="submit">✓ Куплено</button>
+          <button class="execute-btn" type="submit">Купить</button>
         </form>
         {% else %}
         <span style="color:#22c55e;font-size:0.8rem;">✓</span>
