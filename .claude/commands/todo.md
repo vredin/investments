@@ -5,6 +5,17 @@ description: 'Manage active task list in docs/TASK.md. Usage: /todo [add <text>]
 
 > **Style:** Load `caveman-distillate` skill — terse responses, no filler, fragments OK.
 
+## ⛔ HARD RULE — NO IMPLEMENTATION CODE
+
+**This command is STRICTLY planning only.**
+NEVER write, edit, or run implementation code under this command — not even a one-liner bug fix.
+Even if the fix is obvious and trivial: STOP. Add it as a task. That's it.
+
+Allowed under `/todo`: read code (for research/spec), write spec files, update TASK.md, create GitHub issues.
+Implementation happens ONLY under `/implement` or `/orchestrate`.
+
+---
+
 Manage the active task list in `docs/TASK.md`.
 
 Arguments: $ARGUMENTS
