@@ -12,3 +12,4 @@
 | T-006 | Analytics dashboard — allocation donut, goal projection (FV), rebalancing signal, monthly report with LLM | 2026-05-05 | 47c1a66 |
 | T-007 | Playwright E2E тесты — 41 tests (auth/pages/hacker), dual-mode server (subprocess or E2E_BASE_URL), QA hacker: XSS, SQLi, path traversal, IDOR, boundary values | 2026-05-06 | 8652260 |
 | T-008 | Recommend: LLM обоснование на русском + сброс executed при перегенерации плана | 2026-05-06 | e45c9e5 |
+| T-009 | Recommend: кнопка Купить вместо Куплено (action vs status) | 2026-05-06 | b3d4e7d |
