@@ -1,7 +1,7 @@
 import json
 
-from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -40,6 +40,27 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
         "gc_labels_json": json.dumps(gc["gc_labels"]),
         "gc_expected_json": json.dumps(gc["gc_expected"]),
         "gc_actual_json": json.dumps(list(zip(gc["gc_actual_labels"], gc["gc_actual_values"]))),
+    })
+
+
+@router.get("/api/scenario", dependencies=[Depends(login_required)])
+async def scenario(
+    db: Session = Depends(get_db),
+    budget: float = Query(ge=0, le=100_000),
+    return_pct: float = Query(ge=0, le=50),
+    years: int = Query(ge=1, le=50),
+):
+    data = analytics.compute_dashboard_data(db)
+    pv = data["total_capital"]
+    goal = data["goal_usd"] or 1_300_000.0
+    n_months = years * 12
+    fv = analytics.fv_projection(pv, budget, return_pct, n_months)
+    current_fv = analytics.fv_projection(pv, data["budget_usd"], data["assumed_return"], n_months)
+    goal_pct = min(100.0, fv / goal * 100) if goal > 0 else 0.0
+    return JSONResponse({
+        "fv": round(fv),
+        "delta": round(fv - current_fv),
+        "goal_pct": round(goal_pct, 1),
     })
 
 

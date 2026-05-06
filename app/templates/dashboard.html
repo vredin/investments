@@ -220,6 +220,85 @@
 })();
 </script>
 
+{# Сценарный калькулятор #}
+<div class="chart-panel" style="margin-top:1.25rem;">
+  <h2>Сценарный калькулятор — что если</h2>
+  <style>
+    .calc-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem; margin-bottom:1.25rem; }
+    @media(max-width:650px){.calc-grid{grid-template-columns:1fr;}}
+    .calc-field label { display:block; font-size:.75rem; color:#999; margin-bottom:.3rem; }
+    .calc-field input[type=range] { width:100%; margin-bottom:.2rem; }
+    .calc-field .val { font-size:.9rem; font-weight:600; color:#1a1a2e; }
+    .calc-results { display:grid; grid-template-columns:1fr 1fr 1fr; gap:1rem; }
+    @media(max-width:650px){.calc-results{grid-template-columns:1fr;}}
+    .calc-result { background:#f8f9fa; border-radius:6px; padding:.75rem 1rem; text-align:center; }
+    .calc-result .label { font-size:.72rem; color:#aaa; text-transform:uppercase; letter-spacing:.05em; }
+    .calc-result .number { font-size:1.3rem; font-weight:700; color:#1a1a2e; margin-top:.2rem; }
+    .calc-result .delta { font-size:.78rem; margin-top:.15rem; }
+    .delta-pos { color:#16a34a; } .delta-neg { color:#dc2626; }
+  </style>
+  <div class="calc-grid">
+    <div class="calc-field">
+      <label>Бюджет в месяц ($)</label>
+      <input type="range" id="calc-budget" min="0" max="2000" step="50" value="{{ budget_usd | int }}">
+      <div class="val">$<span id="calc-budget-val">{{ budget_usd | int }}</span></div>
+    </div>
+    <div class="calc-field">
+      <label>Доходность (% в год)</label>
+      <input type="range" id="calc-return" min="0" max="20" step="0.5" value="{{ assumed_return }}">
+      <div class="val"><span id="calc-return-val">{{ assumed_return }}</span>%</div>
+    </div>
+    <div class="calc-field">
+      <label>Горизонт (лет)</label>
+      <input type="range" id="calc-years" min="1" max="50" step="1" value="20">
+      <div class="val"><span id="calc-years-val">20</span> лет</div>
+    </div>
+  </div>
+  <div class="calc-results">
+    <div class="calc-result">
+      <div class="label">Итоговая сумма</div>
+      <div class="number" id="calc-fv">—</div>
+    </div>
+    <div class="calc-result">
+      <div class="label">Разница с текущим планом</div>
+      <div class="number" id="calc-delta">—</div>
+    </div>
+    <div class="calc-result">
+      <div class="label">% от цели ${{ "{:,.0f}".format(goal_usd | int) }}</div>
+      <div class="number" id="calc-goal">—</div>
+    </div>
+  </div>
+  <script>
+  (function() {
+    var bSlider = document.getElementById('calc-budget');
+    var rSlider = document.getElementById('calc-return');
+    var ySlider = document.getElementById('calc-years');
+    function fmt(n) { return '$' + Math.round(n).toLocaleString('ru-RU'); }
+    function update() {
+      var b = parseFloat(bSlider.value);
+      var r = parseFloat(rSlider.value);
+      var y = parseInt(ySlider.value);
+      document.getElementById('calc-budget-val').textContent = Math.round(b);
+      document.getElementById('calc-return-val').textContent = r;
+      document.getElementById('calc-years-val').textContent = y;
+      fetch('/api/scenario?budget=' + b + '&return_pct=' + r + '&years=' + y)
+        .then(function(res) { return res.json(); })
+        .then(function(d) {
+          document.getElementById('calc-fv').textContent = fmt(d.fv);
+          var deltaEl = document.getElementById('calc-delta');
+          var sign = d.delta >= 0 ? '+' : '';
+          deltaEl.textContent = sign + fmt(d.delta).replace('$', '') ;
+          deltaEl.className = 'number ' + (d.delta >= 0 ? 'delta-pos' : 'delta-neg');
+          document.getElementById('calc-goal').textContent = d.goal_pct.toFixed(1) + '%';
+        })
+        .catch(function() {});
+    }
+    [bSlider, rSlider, ySlider].forEach(function(el) { el.addEventListener('input', update); });
+    update();
+  })();
+  </script>
+</div>
+
 {% else %}
 <style>
   .onboard { background:#fff; border-radius:10px; box-shadow:0 1px 8px rgba(0,0,0,0.08); padding:2rem; max-width:720px; margin:2rem auto; }
