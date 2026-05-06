@@ -9,7 +9,6 @@
 
 | ID | Task | Spec | Risk | Created |
 |----|------|------|------|---------|
-| T-010 | Глоссарий: ⓘ-tooltip после терминов (DCA, РАЗРЫВ, ETF, ребалансировка) | [spec](specs/T-010-tooltip-glossary.md) | Low | 2026-05-06 |
 | T-011 | Онбординг: пошаговый гайд вместо пустых нулей + описание 4 ETF | [spec](specs/T-011-onboarding-empty-state.md) | Low | 2026-05-06 |
 | T-012 | Сценарный калькулятор "что если" (бюджет/доходность/срок) | [spec](specs/T-012-scenario-calculator.md) | Low | 2026-05-06 |
 | T-013 | Гайд "Что делать при просадке" + текущая просадка VWCE от ATH | [spec](specs/T-013-crisis-guide.md) | Low | 2026-05-06 |
