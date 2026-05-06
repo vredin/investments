@@ -9,6 +9,7 @@
 
 | ID | Task | Spec | Risk | Created |
 |----|------|------|------|---------|
+| T-016 | E2E тесты для T-010..T-015: /analyze, /crisis, /api/scenario, tooltips, risk-profile | [spec](specs/T-016-e2e-tests-t010-t015.md) | Low | 2026-05-06 |
 
 ---
 
