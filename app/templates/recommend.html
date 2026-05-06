@@ -54,9 +54,11 @@
       <td><strong>{{ r.ticker }}</strong></td>
       <td class="num">${{ "%.2f" | format(r.amount_usd) }}</td>
       <td><span class="week">Нед {{ r.week_of_month }}</span></td>
-      <td class="num">{{ "%.1f" | format(r.current_pct) }}%</td>
-      <td class="num">{{ "%.1f" | format(r.target_pct) }}%</td>
-      <td class="num">+{{ "%.1f" | format(r.deviation_pct) }}%</td>
+      {% set cur = current_pcts.get(r.ticker, 0.0) %}
+      {% set tgt = target_pcts.get(r.ticker, 0.0) %}
+      <td class="num">{{ "%.1f" | format(cur) }}%</td>
+      <td class="num">{{ "%.1f" | format(tgt) }}%</td>
+      <td class="num">+{{ "%.1f" | format(tgt - cur) }}%</td>
       <td class="rationale">{{ r.rationale }}</td>
       <td>
         {% if not r.executed %}
