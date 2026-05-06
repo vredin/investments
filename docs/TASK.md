@@ -9,7 +9,6 @@
 
 | ID | Task | Spec | Risk | Created |
 |----|------|------|------|---------|
-| T-007 | Playwright E2E тесты — happy path + QA hacker (auth bypass, XSS, injection, IDOR) | [spec](specs/T-007-playwright-e2e-tests.md) | Low | 2026-05-06 |
 
 ---
 
