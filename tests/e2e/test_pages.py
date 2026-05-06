@@ -8,10 +8,9 @@ pytestmark = [requires_e2e, pytest.mark.e2e]
 
 
 def test_dashboard_renders(auth_page, live_server):
-    auth_page.goto(f"{live_server}/")
-    assert auth_page.status == 200
+    resp = auth_page.goto(f"{live_server}/")
+    assert resp.status == 200
     content = auth_page.content()
-    # Either shows portfolio data OR empty state — never 500
     assert "500" not in auth_page.title()
     assert any(kw in content for kw in ["Портфель", "Позиций не найдено", "Главная"])
 
@@ -22,16 +21,16 @@ def test_dashboard_no_500_on_empty_db(auth_page, live_server):
 
 
 def test_portfolio_renders(auth_page, live_server):
-    auth_page.goto(f"{live_server}/portfolio")
-    assert auth_page.status == 200
+    resp = auth_page.goto(f"{live_server}/portfolio")
+    assert resp.status == 200
     content = auth_page.content()
     assert "Позиции" in content
     assert "Internal Server Error" not in content
 
 
 def test_recommend_page_renders(auth_page, live_server):
-    auth_page.goto(f"{live_server}/recommend")
-    assert auth_page.status == 200
+    resp = auth_page.goto(f"{live_server}/recommend")
+    assert resp.status == 200
     content = auth_page.content()
     assert "Бюджет" in content or "budget" in content.lower()
     assert "Internal Server Error" not in content
@@ -51,12 +50,11 @@ def test_recommend_generate_empty_portfolio(auth_page, live_server):
     auth_page.click("button[type=submit]")
     auth_page.wait_for_load_state("networkidle")
     assert "Internal Server Error" not in auth_page.content()
-    assert auth_page.status == 200
 
 
 def test_settings_page_renders(auth_page, live_server):
-    auth_page.goto(f"{live_server}/settings")
-    assert auth_page.status == 200
+    resp = auth_page.goto(f"{live_server}/settings")
+    assert resp.status == 200
     content = auth_page.content()
     assert "VWCE" in content
     assert "VEUR" in content
@@ -82,7 +80,6 @@ def test_settings_save_valid(auth_page, live_server):
     auth_page.click("button[type=submit]")
     auth_page.wait_for_load_state("networkidle")
     assert "Internal Server Error" not in auth_page.content()
-    # Flash message should appear
     content = auth_page.content()
     assert "Сохранено" in content or "save" in content.lower() or "success" in content.lower()
 
@@ -90,8 +87,8 @@ def test_settings_save_valid(auth_page, live_server):
 def test_report_current_month_renders(auth_page, live_server):
     from datetime import date
     month = date.today().strftime("%Y-%m")
-    auth_page.goto(f"{live_server}/report/{month}")
-    assert auth_page.status == 200
+    resp = auth_page.goto(f"{live_server}/report/{month}")
+    assert resp.status == 200
     content = auth_page.content()
     assert month in content
     assert "Internal Server Error" not in content

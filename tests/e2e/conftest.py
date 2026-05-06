@@ -26,8 +26,11 @@ _TEST_SECRET = os.environ.get(
     os.environ.get("SECRET_KEY", "test_secret_key_32_bytes_minimum_padding_here_"),
 )
 
-# Password used for UI login tests (subprocess mode only).
-TEST_PASSWORD = "testpass123"
+# Password for UI login tests.
+# In subprocess mode: uses TEST_PASSWORD with a matching hash injected into server env.
+# In remote mode (E2E_BASE_URL set): must match the real server's ADMIN_PASSWORD_HASH.
+# Set E2E_PASSWORD env var to the real admin password when running against a live server.
+TEST_PASSWORD = os.environ.get("E2E_PASSWORD", "testpass123")
 _TEST_HASH = bcrypt.hashpw(TEST_PASSWORD.encode(), bcrypt.gensalt(rounds=4)).decode()
 
 _TEST_DB_URL = os.environ.get(
