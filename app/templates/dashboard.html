@@ -37,6 +37,13 @@
 {% block content %}
 {% if last_sync %}
 
+{% if drawdown < -0.10 %}
+<div style="background:#fef2f2;border:1px solid #fca5a5;border-radius:6px;padding:.65rem 1rem;margin-bottom:1.25rem;font-size:.88rem;color:#991b1b;">
+  <strong>Рынок просел {{ "%.0f"|format(drawdown * 100) }}% от максимума.</strong>
+  Это нормально. <a href="/crisis" style="color:#991b1b;font-weight:600;">Читать что делать →</a>
+</div>
+{% endif %}
+
 {% if rebalance_signals %}
 <div class="rebalance-alert">
   <strong><span class="term" data-tip="Ребалансировка — приведение долей к целевым значениям. Не продажа, а перераспределение новых взносов.">Требуется ребалансировка ⓘ</span>:</strong>

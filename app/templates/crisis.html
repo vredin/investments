@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Что делать при просадке — Инвестиции{% endblock %}
+
+{% block head %}
+<style>
+  .crisis-wrap { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: .5rem; }
+  .subtitle { color: #666; font-size: .95rem; margin-bottom: 2rem; }
+  h2 { font-size: 1rem; font-weight: 700; margin: 1.75rem 0 .6rem; color: #1a1a2e; }
+  p { font-size: .9rem; line-height: 1.65; color: #444; margin-bottom: .75rem; }
+  .highlight { background: #eff6ff; border-left: 3px solid #3b5bdb; padding: .75rem 1rem; border-radius: 0 6px 6px 0; margin: 1rem 0; font-size: .9rem; color: #1e3a8a; }
+  .hist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+  @media(max-width:500px){.hist-grid{grid-template-columns:1fr;}}
+  .hist-card { background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); padding: 1rem; }
+  .hist-card .year { font-size: .78rem; color: #aaa; text-transform: uppercase; letter-spacing: .06em; }
+  .hist-card .drop { font-size: 1.6rem; font-weight: 700; color: #dc2626; }
+  .hist-card .recovery { font-size: .85rem; color: #16a34a; margin-top: .2rem; }
+  .hist-card p { font-size: .8rem; color: #666; margin-top: .4rem; margin-bottom: 0; }
+  .rule { background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 1rem 1.25rem; margin: 1.5rem 0; }
+  .rule strong { color: #166534; font-size: 1rem; }
+  .rule p { color: #166534; margin-bottom: 0; }
+  .back { display: inline-block; margin-top: 1.5rem; color: #3b5bdb; font-size: .88rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="crisis-wrap">
+  <h1>Рынок упал. Что делать?</h1>
+  <p class="subtitle">Психологически сложно видеть минусы в портфеле. Вот что важно знать.</p>
+
+  <h2>Почему рынок падает</h2>
+  <p>Рынки следуют бизнес-циклам: за ростом всегда идёт коррекция. Кризисы случаются примерно раз в 7–10 лет — это не исключение, а часть нормального функционирования экономики. Инвесторы, которые держат ETF, проходят через все фазы цикла.</p>
+
+  <h2>Что происходит с ETF при падении</h2>
+  <p>Цена ETF падает вместе с рынком — это нормально. Но сам фонд не «банкротится»: он продолжает держать сотни компаний. Когда рынок восстанавливается — восстанавливается и ваш ETF.</p>
+  <div class="highlight">
+    Покупая ETF типа VWCE, вы инвестируете в ~3 500 компаний из 50 стран одновременно. Даже если часть из них упадёт — диверсификация защищает ваш портфель.
+  </div>
+
+  <h2>Исторические кризисы: как это было</h2>
+  <div class="hist-grid">
+    <div class="hist-card">
+      <div class="year">Финансовый кризис 2008–2009</div>
+      <div class="drop">−57%</div>
+      <div class="recovery">Восстановление: ~5 лет</div>
+      <p>Худший кризис со времён Великой депрессии. Мировой рынок потерял больше половины стоимости — и полностью восстановился к 2013 году.</p>
+    </div>
+    <div class="hist-card">
+      <div class="year">COVID-19 2020</div>
+      <div class="drop">−34%</div>
+      <div class="recovery">Восстановление: ~5 месяцев</div>
+      <p>Самое быстрое падение в истории и одно из самых быстрых восстановлений. Инвесторы, которые продали в панике в марте, потеряли весь отскок.</p>
+    </div>
+  </div>
+
+  <h2>DCA во время кризиса — ваше преимущество</h2>
+  <p>Когда рынок падает, ваш ежемесячный взнос покупает <strong>больше акций по сниженной цене</strong>. Это ускоряет восстановление портфеля, когда рынок разворачивается вверх.</p>
+  <div class="highlight">
+    Пример: в марте 2020 VWCE упал с €90 до €60. Если вы продолжали вносить €200/месяц, то купили на 33% больше акций, чем в январе — и получили весь отскок на удвоенном объёме.
+  </div>
+
+  <div class="rule">
+    <strong>Золотое правило долгосрочного инвестора</strong>
+    <p>Не продавай в кризис. Паническая продажа фиксирует убыток — после этого вам нужно не только восстановить портфель, но и угадать момент обратной покупки.</p>
+  </div>
+
+  <h2>Что делать прямо сейчас</h2>
+  <p><strong>1. Ничего не продавать.</strong> Просадка — это временное состояние. Продажа делает её постоянной.</p>
+  <p><strong>2. Продолжать ежемесячные взносы.</strong> Дисциплина в кризис — главное конкурентное преимущество частного инвестора.</p>
+  <p><strong>3. Не смотреть на портфель каждый день.</strong> Частые проверки усиливают тревогу и не влияют на результат.</p>
+  <p><strong>4. Вспомните горизонт.</strong> Вы инвестируете до 2046 года. У кризиса 2020 года не было шансов навредить тем, кто держал позицию.</p>
+
+  <a class="back" href="/">← Вернуться на главную</a>
+</div>
+{% endblock %}

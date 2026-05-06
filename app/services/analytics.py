@@ -232,3 +232,18 @@ def llm_report_narrative(month: str, data: dict) -> str:
     except Exception as exc:
         logger.warning("LLM report narrative failed for %s: %s", month, exc)
         return ""
+
+
+def get_market_drawdown(ticker: str = "VWCE.AS") -> float:
+    """Current drawdown from 52-week high. Returns negative float e.g. -0.15 for -15%."""
+    try:
+        import yfinance as yf
+        hist = yf.Ticker(ticker).history(period="1y")
+        if hist.empty:
+            return 0.0
+        peak = hist["Close"].max()
+        current = hist["Close"].iloc[-1]
+        return float((current - peak) / peak)
+    except Exception as exc:
+        logger.warning("get_market_drawdown failed for %s: %s", ticker, exc)
+        return 0.0

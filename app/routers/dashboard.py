@@ -17,6 +17,7 @@ templates = Jinja2Templates(directory="app/templates")
 @router.get("/", response_class=HTMLResponse, dependencies=[Depends(login_required)])
 async def dashboard(request: Request, db: Session = Depends(get_db)):
     data = analytics.compute_dashboard_data(db)
+    drawdown = analytics.get_market_drawdown()
 
     snapshots = (
         db.query(ProgressSnapshot)
@@ -34,6 +35,7 @@ async def dashboard(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse(request, "dashboard.html", {
         **data,
         **gc,
+        "drawdown": drawdown,
         "donut_labels_json": json.dumps(data["donut_labels"]),
         "donut_current_json": json.dumps([round(v, 2) for v in data["donut_current"]]),
         "donut_target_json": json.dumps([round(v, 2) for v in data["donut_target"]]),
@@ -62,6 +64,11 @@ async def scenario(
         "delta": round(fv - current_fv),
         "goal_pct": round(goal_pct, 1),
     })
+
+
+@router.get("/crisis", response_class=HTMLResponse, dependencies=[Depends(login_required)])
+async def crisis(request: Request):
+    return templates.TemplateResponse(request, "crisis.html", {})
 
 
 @router.get("/health")
