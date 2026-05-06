@@ -9,6 +9,7 @@
 
 | ID | Task | Spec | Risk | Created |
 |----|------|------|------|---------|
+| T-008 | Recommend: обоснование на русском + сброс "Куплено" при перегенерации | [spec](specs/T-008-recommend-russian-rationale-reset-executed.md) | Low | 2026-05-06 |
 
 ---
 
