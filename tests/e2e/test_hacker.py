@@ -291,6 +291,17 @@ def test_analyze_null_bytes_ticker_no_500(live_server):
 
 
 # ---------------------------------------------------------------------------
+# T-017: /calculators — auth bypass
+# ---------------------------------------------------------------------------
+
+def test_calculators_unauthenticated_redirects(live_server):
+    """GET /calculators without auth must redirect to /login."""
+    r = httpx.get(f"{live_server}/calculators", follow_redirects=False, timeout=5)
+    assert r.status_code in (302, 307)
+    assert "login" in r.headers.get("location", "").lower()
+
+
+# ---------------------------------------------------------------------------
 # T-013: /crisis — auth bypass
 # ---------------------------------------------------------------------------
 

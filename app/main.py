@@ -9,6 +9,7 @@ from app.routers import (
     admin,
     analyze,
     auth_router,
+    calculators,
     dashboard,
     portfolio,
     recommend,
@@ -43,5 +44,6 @@ app.include_router(report.router)
 app.include_router(settings.router)
 app.include_router(admin.router)
 app.include_router(analyze.router)
+app.include_router(calculators.router)
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")

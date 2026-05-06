@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block title %}Финансовые калькуляторы{% endblock %}
+
+{% block head %}
+<style>
+  .calc-section { background: #fff; border-radius: 8px; padding: 1.5rem; margin-bottom: 2rem; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+  .calc-section h2 { font-size: 1.2rem; margin-bottom: 1.25rem; color: #1a1a2e; }
+  .form-row { display: flex; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; min-width: 160px; flex: 1; }
+  .form-group label { font-size: 0.82rem; color: #555; }
+  .form-group input[type=number] { padding: .45rem .6rem; border: 1px solid #ccc; border-radius: 5px; font-size: 0.95rem; }
+  .btn-calc { background: #1a1a2e; color: #fff; border: none; padding: .5rem 1.4rem; border-radius: 5px; cursor: pointer; font-size: .9rem; }
+  .btn-calc:hover { background: #2d2d5e; }
+  .warning { background: #fff3cd; color: #856404; border: 1px solid #ffc107; border-radius: 5px; padding: .6rem .9rem; font-size: .85rem; margin-top: .5rem; display: none; }
+  /* compound table */
+  .calc-table-wrap { overflow-x: auto; margin-top: 1rem; }
+  .calc-table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+  .calc-table th { background: #1a1a2e; color: #fff; padding: .45rem .7rem; text-align: right; font-weight: 500; }
+  .calc-table th:first-child { text-align: center; }
+  .calc-table td { padding: .4rem .7rem; border-bottom: 1px solid #eee; text-align: right; }
+  .calc-table td:first-child { text-align: center; color: #555; }
+  .calc-table tr:hover td { background: #f8f9ff; }
+  .calc-totals { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1rem; }
+  .calc-total-card { flex: 1; min-width: 160px; background: #f8f9ff; border: 1px solid #dde; border-radius: 6px; padding: .75rem 1rem; }
+  .calc-total-card .label { font-size: .78rem; color: #666; margin-bottom: 2px; }
+  .calc-total-card .value { font-size: 1.05rem; font-weight: 600; color: #1a1a2e; }
+  /* FI result cards */
+  .fi-cards { display: flex; flex-wrap: wrap; gap: 1rem; margin-top: 1rem; }
+  .fi-card { flex: 1; min-width: 200px; background: #f0f4ff; border-left: 4px solid #4a6cf7; border-radius: 6px; padding: 1rem; }
+  .fi-card .fi-label { font-size: .8rem; color: #555; margin-bottom: .3rem; }
+  .fi-card .fi-value { font-size: 1.3rem; font-weight: 700; color: #1a1a2e; }
+  .fi-card .fi-sub { font-size: .75rem; color: #888; margin-top: .25rem; }
+  #ci-result, #fi-result { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1 style="margin-bottom:1.5rem;font-size:1.5rem;color:#1a1a2e;">Финансовые калькуляторы</h1>
+
+<!-- ===== COMPOUND INTEREST ===== -->
+<section class="calc-section">
+  <h2>Калькулятор сложных процентов</h2>
+  <div class="form-row">
+    <div class="form-group">
+      <label for="ci-pv">Начальный депозит ($)</label>
+      <input type="number" id="ci-pv" value="1000" min="0" step="any">
+    </div>
+    <div class="form-group">
+      <label for="ci-n">Количество периодов</label>
+      <input type="number" id="ci-n" value="12" min="0" step="1">
+    </div>
+    <div class="form-group">
+      <label for="ci-r">Доходность за 1 период (%)</label>
+      <input type="number" id="ci-r" value="1" min="0" step="any">
+    </div>
+    <div class="form-group">
+      <label for="ci-pmt">Довложения каждый период ($)</label>
+      <input type="number" id="ci-pmt" value="0" min="0" step="any">
+    </div>
+  </div>
+  <button class="btn-calc" onclick="calcCompound()">Рассчитать</button>
+  <div id="ci-warn" class="warning">Слишком много периодов (макс. 600). Уменьшите значение N.</div>
+
+  <div id="ci-result">
+    <div class="calc-totals">
+      <div class="calc-total-card">
+        <div class="label">Финальная сумма</div>
+        <div class="value" id="ci-total"></div>
+      </div>
+      <div class="calc-total-card">
+        <div class="label">Итого начислено %</div>
+        <div class="value" id="ci-interest"></div>
+      </div>
+      <div class="calc-total-card">
+        <div class="label">Итого довложений</div>
+        <div class="value" id="ci-deposits"></div>
+      </div>
+    </div>
+    <div class="calc-table-wrap">
+      <table class="calc-table">
+        <thead>
+          <tr>
+            <th>Период</th>
+            <th>Начало</th>
+            <th>Начислено %</th>
+            <th>Довложено</th>
+            <th>Конец периода</th>
+          </tr>
+        </thead>
+        <tbody id="ci-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ===== FINANCIAL INDEPENDENCE ===== -->
+<section class="calc-section">
+  <h2>Калькулятор финансовой независимости</h2>
+  <div class="form-row">
+    <div class="form-group">
+      <label for="fi-monthly">Желаемый доход ($/мес, сегодн. $)</label>
+      <input type="number" id="fi-monthly" value="2000" min="0" step="any">
+    </div>
+    <div class="form-group">
+      <label for="fi-years">Горизонт (лет)</label>
+      <input type="number" id="fi-years" value="20" min="1" step="1">
+    </div>
+    <div class="form-group">
+      <label for="fi-inflation">Инфляция (%/год)</label>
+      <input type="number" id="fi-inflation" value="3" min="0" step="any">
+    </div>
+    <div class="form-group">
+      <label for="fi-withdrawal">Ставка изъятия (%/год)</label>
+      <input type="number" id="fi-withdrawal" value="4" min="0.1" step="any">
+    </div>
+    <div class="form-group">
+      <label for="fi-return">Ожидаемая доходность (%/год)</label>
+      <input type="number" id="fi-return" value="8" min="0" step="any">
+    </div>
+  </div>
+  <button class="btn-calc" onclick="calcFI()">Рассчитать</button>
+
+  <div id="fi-result">
+    <div class="fi-cards">
+      <div class="fi-card">
+        <div class="fi-label">Доход через N лет (с учётом инфляции)</div>
+        <div class="fi-value" id="fi-future-monthly"></div>
+        <div class="fi-sub">в месяц в будущих деньгах</div>
+      </div>
+      <div class="fi-card">
+        <div class="fi-label">Необходимый капитал</div>
+        <div class="fi-value" id="fi-capital"></div>
+        <div class="fi-sub">по правилу ставки изъятия</div>
+      </div>
+      <div class="fi-card">
+        <div class="fi-label">Ежемесячные взносы (с $0)</div>
+        <div class="fi-value" id="fi-pmt"></div>
+        <div class="fi-sub">чтобы накопить за N лет</div>
+      </div>
+    </div>
+    <p style="margin-top:1rem;font-size:.8rem;color:#888;">
+      Для отслеживания прогресса — перейдите на <a href="/">главную панель</a>.
+    </p>
+  </div>
+</section>
+
+<script>
+function fmt(n) {
+  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function num(id, def) { const v = parseFloat(document.getElementById(id).value); return Number.isFinite(v) ? v : def; }
+
+function calcCompound() {
+  const pv  = num('ci-pv', 0);
+  const n   = Math.trunc(num('ci-n', 0));
+  const r   = num('ci-r', 0);
+  const pmt = num('ci-pmt', 0);
+
+  const warn = document.getElementById('ci-warn');
+  const result = document.getElementById('ci-result');
+
+  if (n <= 0) { result.style.display = 'none'; warn.style.display = 'none'; return; }
+  if (n > 600) { warn.style.display = 'block'; result.style.display = 'none'; return; }
+  warn.style.display = 'none';
+
+  // Build full table (max 600 rows computed)
+  const rows = [];
+  let balance = Math.max(0, pv);
+  let totalInterest = 0;
+  let totalDeposits = 0;
+  for (let i = 1; i <= n; i++) {
+    const interest = balance * Math.max(0, r) / 100;
+    const end = balance + interest + Math.max(0, pmt);
+    rows.push({ period: i, start: balance, interest, pmt: Math.max(0, pmt), end });
+    totalInterest += interest;
+    totalDeposits += Math.max(0, pmt);
+    balance = end;
+  }
+
+  // Display: cap at ~120 rows — show every step-th row + always last
+  const step = n <= 120 ? 1 : Math.ceil(n / 120);
+  const tbody = document.getElementById('ci-tbody');
+  tbody.innerHTML = '';
+  for (let i = 0; i < rows.length; i++) {
+    if ((rows[i].period % step === 0) || rows[i].period === n) {
+      const r2 = rows[i];
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        `<td>${r2.period}</td>` +
+        `<td>${fmt(r2.start)}</td>` +
+        `<td>${fmt(r2.interest)}</td>` +
+        `<td>${fmt(r2.pmt)}</td>` +
+        `<td><strong>${fmt(r2.end)}</strong></td>`;
+      tbody.appendChild(tr);
+    }
+  }
+
+  document.getElementById('ci-total').textContent    = fmt(rows[rows.length-1].end);
+  document.getElementById('ci-interest').textContent = fmt(totalInterest);
+  document.getElementById('ci-deposits').textContent = fmt(totalDeposits);
+  result.style.display = 'block';
+}
+
+function calcFI() {
+  const monthly    = Math.max(0, num('fi-monthly', 0));
+  const years      = Math.max(1, num('fi-years', 1));
+  const inflation  = Math.max(0, num('fi-inflation', 0));
+  const withdrawal = Math.max(0.1, num('fi-withdrawal', 4));
+  const ret        = Math.max(0, num('fi-return', 0));
+
+  const futureMonthly = monthly * Math.pow(1 + inflation / 100, years);
+  const annualIncome  = futureMonthly * 12;
+  const capital       = annualIncome / (withdrawal / 100);
+
+  const r = ret / 100 / 12;
+  const nm = years * 12;
+  const pmtMonthly = r > 0
+    ? capital * r / (Math.pow(1 + r, nm) - 1)
+    : capital / nm;
+
+  document.getElementById('fi-future-monthly').textContent = fmt(futureMonthly);
+  document.getElementById('fi-capital').textContent        = fmt(capital);
+  document.getElementById('fi-pmt').textContent            = fmt(pmtMonthly);
+  document.getElementById('fi-result').style.display       = 'block';
+}
+
+// Auto-calculate on input change
+['ci-pv','ci-n','ci-r','ci-pmt'].forEach(id =>
+  document.getElementById(id).addEventListener('input', calcCompound));
+['fi-monthly','fi-years','fi-inflation','fi-withdrawal','fi-return'].forEach(id =>
+  document.getElementById(id).addEventListener('input', calcFI));
+
+// Initial render
+calcCompound();
+calcFI();
+</script>
+{% endblock %}

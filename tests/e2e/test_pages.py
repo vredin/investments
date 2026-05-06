@@ -192,3 +192,49 @@ def test_tooltips_visible_on_settings(auth_page, live_server):
     """/settings always renders .term elements (alloc header, DCA, return rate)."""
     auth_page.goto(f"{live_server}/settings")
     assert auth_page.locator(".term").count() > 0
+
+
+# ---------------------------------------------------------------------------
+# T-017: /calculators
+# ---------------------------------------------------------------------------
+
+def test_calculators_unauthenticated_redirects(live_server):
+    """GET /calculators without auth must redirect to /login."""
+    import httpx
+    r = httpx.get(f"{live_server}/calculators", follow_redirects=False, timeout=5)
+    assert r.status_code in (302, 307)
+    assert "login" in r.headers.get("location", "").lower()
+
+
+def test_calculators_renders(auth_page, live_server):
+    """GET /calculators must return 200 and render both calculators."""
+    resp = auth_page.goto(f"{live_server}/calculators")
+    assert resp.status == 200
+    content = auth_page.content()
+    assert "Калькулятор сложных процентов" in content
+    assert "Калькулятор финансовой независимости" in content
+    assert "Internal Server Error" not in content
+
+
+def test_calculators_compound_fields_present(auth_page, live_server):
+    """Compound interest form inputs must be present."""
+    auth_page.goto(f"{live_server}/calculators")
+    assert auth_page.locator("#ci-pv").count() == 1
+    assert auth_page.locator("#ci-n").count() == 1
+    assert auth_page.locator("#ci-r").count() == 1
+    assert auth_page.locator("#ci-pmt").count() == 1
+
+
+def test_calculators_fi_fields_present(auth_page, live_server):
+    """Financial independence form inputs must be present."""
+    auth_page.goto(f"{live_server}/calculators")
+    assert auth_page.locator("#fi-monthly").count() == 1
+    assert auth_page.locator("#fi-years").count() == 1
+    assert auth_page.locator("#fi-withdrawal").count() == 1
+    assert auth_page.locator("#fi-return").count() == 1
+
+
+def test_calculators_nav_link_present(auth_page, live_server):
+    """Nav must contain 'Калькуляторы' link pointing to /calculators."""
+    auth_page.goto(f"{live_server}/")
+    assert auth_page.locator("nav a[href='/calculators']").count() == 1
