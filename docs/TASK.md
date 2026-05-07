@@ -9,7 +9,6 @@
 
 | ID | Task | Spec | Risk | Created |
 |----|------|------|------|---------|
-| T-018 | BTD-сигнал на /recommend: баннер при просадке VWCE ≤ threshold + допбюджет underweight-first | [spec](specs/T-018-btd-dip-signal.md) | Low | 2026-05-07 |
 
 ---
 
