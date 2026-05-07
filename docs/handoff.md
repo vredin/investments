@@ -1,27 +1,33 @@
-# Session Handoff — 2026-05-06
+# Session Handoff — 2026-05-07
 
 ## Completed This Session
-- T-016: E2E тести для T-010..T-015 — 19 page + 30 hacker тестів, 61/61 pass — commit 5495c0d
-- Бонусний фікс: report.py — redirect при недійсному форматі місяця замість 500 — commit 5495c0d
-- T-017: спек + GitHub issue #17 — калькулятор сложных процентов + фінансової незалежності — commit 9c31ea4
+
+- T-019: Деплой step-фикса (goal_usd step="1") на VPS + 3 Playwright-теста HTML5 валидации — done, committed ec3e09b, deployed, archived, issue #19 closed
+- T-018: BTD-сигнал на /recommend — get_btd_signal() с 15-мин кешем, BTD-баннер, 2 поля в /settings — done, committed 16b3f35, deployed, archived, issue #18 closed
+- Vault: G-035 (Playwright fill bypasses HTML5 step validation), G-036 (sync external API in GET handler needs TTL cache)
 
 ## In Progress (not finished)
-T-017 — лише спек, реалізація не розпочата.
+
+None. Backlog is empty.
 
 ## Next Session Should
-1. `/implement` — реалізувати T-017: new `app/routers/calculators.py`, `app/templates/calculators.html`, підключити в `main.py`, ссилка в `base.html`
-2. Перевірити success criteria: PV=100, N=10, r=10% → $259.37; monthly=$2000, years=20, inflation=3%, withdrawal=4% → capital≈$1,083,600
-3. Запустити E2E тести проти VPS: `E2E_BASE_URL=https://money.semishan.pro E2E_SECRET_KEY="<key>" uv run pytest tests/e2e/ -v`
+
+1. Run E2E тесты против прода: `E2E_BASE_URL=https://money.semishan.pro uv run pytest tests/e2e/ -q` — убедиться что все 3 новых T-019 теста проходят
+2. Проверить /recommend на проде — BTD баннер скрыт (рынок не в просадке ≥10%) или виден если просадка активна
+3. Выбрать следующую задачу через `/todo add` или дождаться запроса пользователя
 
 ## Context That Would Be Lost
-- E2E тести потребують `E2E_SECRET_KEY` = SECRET_KEY з VPS (`ssh vps3 "grep '^SECRET_KEY=' /opt/Investments/.env | cut -d= -f2-"`)
-- T-017 spec: калькулятор сложных процентов використовує модель "довкладення в кінці періоду" (end-of-period)
-- T-017 spec: при N > 60 — показувати кожен `ceil(N/60)` рядок; cap 600 для обчислення
-- PMT формула при r=0: `capital / n` (лінійний випадок, без ділення на нуль)
-- Після deploy потрібно переінсталювати Playwright deps: `docker compose exec app python3 -m playwright install-deps chromium`
+
+- T-019 тесты SKIP локально (requires_e2e marker) — это ожидаемо, не баг. Нужен E2E_BASE_URL для запуска против живого сервера.
+- Flash message в settings роутере изменён с "Settings saved" → "Сохранено" — нужно для assert в test_settings_save_valid.
+- BTD threshold: server-side отклоняет btd_threshold_pct >= 0 с русской ошибкой. HTML input min=-50 max=-1, но сервер проверяет независимо.
+- _drawdown_cache в recommender.py — module-level dict, сбрасывается при рестарте контейнера. Первый GET /recommend после рестарта вызовет yfinance live.
+- DA нашёл и исправил: no-op assert в test_settings_form_submit_non_round_goal ("990001" never в HTML — browser tooltips не в DOM).
 
 ## User's Last Unanswered Question
-Немає. Остання дія — `/todo add` для T-017, задача додана в бекелог.
+
+None — пользователь вызвал /orchestrate, pipeline завершён, бэклог пуст.
 
 ## Open Questions for User
-- Немає відкритих питань.
+
+None.
