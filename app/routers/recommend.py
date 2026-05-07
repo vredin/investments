@@ -33,6 +33,7 @@ async def recommend_page(request: Request, db: Session = Depends(get_db)):
     budget = settings_service.get_float(db, "budget_usd")
     saved = rec_service.get_month_recommendations(db, month)
     current_pcts, target_pcts = _compute_pcts(db)
+    btd = rec_service.get_btd_signal(db)
     return templates.TemplateResponse(request, "recommend.html", {
         "month": month,
         "budget": budget,
@@ -40,6 +41,7 @@ async def recommend_page(request: Request, db: Session = Depends(get_db)):
         "current_pcts": current_pcts,
         "target_pcts": target_pcts,
         "generated": False,
+        "btd": btd,
     })
 
 
@@ -67,6 +69,7 @@ async def recommend_submit(
         return RedirectResponse(url="/recommend", status_code=302)
 
     saved = rec_service.get_month_recommendations(db, month)
+    btd = rec_service.get_btd_signal(db)
     return templates.TemplateResponse(request, "recommend.html", {
         "month": month,
         "budget": budget,
@@ -74,6 +77,7 @@ async def recommend_submit(
         "current_pcts": current_pcts,
         "target_pcts": target_pcts,
         "generated": True,
+        "btd": btd,
     })
 
 

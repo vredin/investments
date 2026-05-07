@@ -11,7 +11,7 @@ router = APIRouter(prefix="/settings", tags=["settings"], dependencies=[Depends(
 templates = Jinja2Templates(directory="app/templates")
 
 _ALLOCATION_KEYS = [f"allocation.{t}" for t in settings_service.TARGET_TICKERS]
-_NUMERIC_KEYS = _ALLOCATION_KEYS + ["budget_usd", "assumed_return_pct", "goal_usd"]
+_NUMERIC_KEYS = _ALLOCATION_KEYS + ["budget_usd", "assumed_return_pct", "goal_usd", "btd_threshold_pct", "btd_extra_budget_usd"]
 
 
 @router.get("", response_class=HTMLResponse)
@@ -35,6 +35,9 @@ async def settings_submit(request: Request, db: Session = Depends(get_db)):
             if key.startswith("allocation.") and not (0 <= parsed <= 100):
                 errors.append(f"{key}: must be 0–100")
                 continue
+            if key == "btd_threshold_pct" and parsed >= 0:
+                errors.append("btd_threshold_pct: должно быть отрицательным (например, -10)")
+                continue
             updates[key] = str(parsed)
         except ValueError:
             errors.append(f"{key}: must be a number")
@@ -46,5 +49,5 @@ async def settings_submit(request: Request, db: Session = Depends(get_db)):
 
     settings_service.save(db, updates)
     db.commit()
-    request.session["flash"] = {"type": "success", "msg": "Settings saved"}
+    request.session["flash"] = {"type": "success", "msg": "Сохранено"}
     return RedirectResponse(url="/settings", status_code=302)

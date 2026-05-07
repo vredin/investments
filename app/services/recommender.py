@@ -144,6 +144,52 @@ def generate_buy_plan(budget_usd: float, db: Session) -> list[BuyRow]:
     return rows
 
 
+_drawdown_cache: dict[str, object] = {"ts": 0.0, "value": 0.0}
+_DRAWDOWN_TTL = 900  # 15 min
+
+
+def _cached_drawdown() -> float:
+    import time
+
+    from app.services.analytics import get_market_drawdown
+
+    now = time.monotonic()
+    if now - float(_drawdown_cache["ts"]) < _DRAWDOWN_TTL:
+        return float(_drawdown_cache["value"])
+    try:
+        val = get_market_drawdown()
+    except Exception as exc:
+        logger.warning("BTD drawdown fetch failed: %s", exc)
+        val = 0.0
+    _drawdown_cache["ts"] = now
+    _drawdown_cache["value"] = val
+    return val
+
+
+def get_btd_signal(db: Session) -> dict | None:
+    """Returns BTD signal dict if VWCE drawdown <= threshold, else None.
+    Gracefully returns None on yfinance errors or flat/rising market.
+    Drawdown value is cached for 15 min to avoid blocking every GET /recommend.
+    """
+    threshold = settings_service.get_float(db, "btd_threshold_pct")  # e.g. -10.0
+    if threshold >= 0:
+        return None  # misconfigured — positive threshold never triggers sensibly
+    extra_budget = settings_service.get_float(db, "btd_extra_budget_usd")
+    drawdown = _cached_drawdown()  # negative float e.g. -0.15; 0.0 = at peak or unknown
+    if drawdown >= 0.0:
+        return None
+    # threshold stored as -10 meaning -10%; drawdown as -0.15 meaning -15%
+    if drawdown > threshold / 100:
+        return None
+    rows = generate_buy_plan(extra_budget, db)
+    return {
+        "drawdown_pct": round(drawdown * 100, 1),
+        "threshold_pct": threshold,
+        "extra_budget": extra_budget,
+        "rows": rows,
+    }
+
+
 def upsert_recommendations(db: Session, month: str, rows: list[BuyRow]) -> None:
     if not rows:
         return

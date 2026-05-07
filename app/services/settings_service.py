@@ -17,6 +17,8 @@ _DEFAULTS: dict[str, str] = {
     "budget_usd": "200",
     "assumed_return_pct": "8",
     "goal_usd": "1300000",
+    "btd_threshold_pct": "-10",
+    "btd_extra_budget_usd": "200",
 }
 
 TARGET_TICKERS = ["VWCE", "VEUR", "AGGH", "XEON"]

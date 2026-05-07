@@ -20,11 +20,43 @@
   .execute-btn { background: none; border: 1px solid #22c55e; color: #16a34a; border-radius: 4px; padding: 0.2rem 0.6rem; font-size: 0.78rem; cursor: pointer; }
   .empty { color: #bbb; text-align: center; padding: 2rem; font-size: 0.875rem; }
   .section-note { font-size: 0.82rem; color: #aaa; margin-bottom: 1rem; }
+  .btd-banner { background: #fff7ed; border: 1px solid #fb923c; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
+  .btd-banner h3 { font-size: 1rem; font-weight: 700; color: #c2410c; margin: 0 0 0.5rem; }
+  .btd-banner p { font-size: 0.88rem; color: #7c2d12; margin: 0 0 0.75rem; }
+  .btd-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .btd-table th { text-align: left; color: #9a3412; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em; padding: 0.3rem 0.6rem; border-bottom: 1px solid #fed7aa; }
+  .btd-table td { padding: 0.3rem 0.6rem; border-bottom: 1px solid #ffedd5; }
+  .btd-table tr:last-child td { border-bottom: none; }
+  .btd-empty { color: #9a3412; font-size: 0.85rem; font-style: italic; }
 </style>
 {% endblock %}
 
 {% block content %}
 <h1>Рекомендации на месяц</h1>
+
+{% if btd %}
+<div class="btd-banner">
+  <h3>⚠️ BTD-сигнал: VWCE просел на {{ btd.drawdown_pct }}% от годового максимума</h3>
+  <p>Порог срабатывания: {{ btd.threshold_pct }}%. По стратегии BTD рекомендуем дополнительно <strong>${{ btd.extra_budget | int }}</strong> сверх обычного DCA-взноса:</p>
+  {% if btd.rows %}
+  <table class="btd-table">
+    <thead><tr><th>Тикер</th><th>Сумма ($)</th><th>Факт %</th><th>Цель %</th></tr></thead>
+    <tbody>
+    {% for r in btd.rows %}
+    <tr>
+      <td><strong>{{ r.ticker }}</strong></td>
+      <td>${{ "%.2f" | format(r.amount_usd) }}</td>
+      <td>{{ "%.1f" | format(r.current_pct) }}%</td>
+      <td>{{ "%.1f" | format(r.target_pct) }}%</td>
+    </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="btd-empty">Все позиции в норме — нет underweight-тикеров для допокупки.</p>
+  {% endif %}
+</div>
+{% endif %}
 
 <form method="POST" action="/recommend" class="form-row">
   <label>Бюджет на месяц ($):

@@ -51,6 +51,20 @@
     </div>
   </div>
 
+  <div class="panel">
+    <h2>BTD — Докупка на просадке</h2>
+    <div class="field">
+      <label>Порог просадки (%)</label>
+      <input type="number" name="btd_threshold_pct" value="{{ cfg.get('btd_threshold_pct', '-10') }}" min="-50" max="-1" step="1">
+      <span class="hint">напр. -10 = сигнал при -10%</span>
+    </div>
+    <div class="field">
+      <label>Доп. бюджет BTD ($)</label>
+      <input type="number" name="btd_extra_budget_usd" value="{{ cfg.get('btd_extra_budget_usd', '200') }}" min="1" step="1">
+      <span class="hint">сверх обычного DCA</span>
+    </div>
+  </div>
+
   <button type="submit">Сохранить</button>
 </form>
 
