@@ -85,6 +85,38 @@ def test_settings_save_valid(auth_page, live_server):
     assert "Сохранено" in content or "save" in content.lower() or "success" in content.lower()
 
 
+# T-019: Regression tests for HTML5 step validation on settings form
+def test_settings_goal_usd_step_attribute(auth_page, live_server):
+    """step must be '1' so any integer is valid, not just multiples of 10000."""
+    auth_page.goto(f"{live_server}/settings")
+    step = auth_page.locator("input[name='goal_usd']").get_attribute("step")
+    assert step == "1", f"goal_usd step must be '1', got {step!r}"
+
+
+def test_settings_goal_usd_accepts_arbitrary_values(auth_page, live_server):
+    """Arbitrary non-round values must pass HTML5 checkValidity (not blocked by browser)."""
+    auth_page.goto(f"{live_server}/settings")
+    inp = auth_page.locator("input[name='goal_usd']")
+    for value in ["1000000", "850000", "1300000", "999999", "1"]:
+        inp.fill(value)
+        is_valid = inp.evaluate("el => el.checkValidity()")
+        assert is_valid, f"goal_usd={value} should pass HTML5 validation but checkValidity() returned False"
+
+
+def test_settings_form_submit_non_round_goal(auth_page, live_server):
+    """Submitting goal_usd=1000000 must reach server and return success, not be blocked by browser."""
+    auth_page.goto(f"{live_server}/settings")
+    auth_page.fill("input[name='goal_usd']", "1000000")
+    auth_page.fill("input[name='budget_usd']", "200")
+    auth_page.fill("input[name='assumed_return_pct']", "8")
+    auth_page.click("button[type=submit]")
+    auth_page.wait_for_load_state("networkidle")
+    content = auth_page.content()
+    assert "Internal Server Error" not in content
+    assert any(kw in content for kw in ["Сохранено", "success", "saved"]), \
+        "Form did not return success confirmation after submit with goal_usd=1000000"
+
+
 def test_report_current_month_renders(auth_page, live_server):
     from datetime import date
     month = date.today().strftime("%Y-%m")
