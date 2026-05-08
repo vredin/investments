@@ -1,33 +1,42 @@
-# Session Handoff — 2026-05-07
+# Session Handoff — 2026-05-08
 
 ## Completed This Session
 
-- T-019: Деплой step-фикса (goal_usd step="1") на VPS + 3 Playwright-теста HTML5 валидации — done, committed ec3e09b, deployed, archived, issue #19 closed
-- T-018: BTD-сигнал на /recommend — get_btd_signal() с 15-мин кешем, BTD-баннер, 2 поля в /settings — done, committed 16b3f35, deployed, archived, issue #18 closed
-- Vault: G-035 (Playwright fill bypasses HTML5 step validation), G-036 (sync external API in GET handler needs TTL cache)
+- phase00-session01-skeleton: все 22 задачи [x], state.json обновлён, committed db0a34b
+- phase01-session01-broker-sync: spec.md + tasks.md созданы (21 задача), state.json обновлён
+- docs/DEPLOY.md: переписан на git-based deploy (git push + ssh vps3 git pull), committed 34f4387
+- .spec_system/CONSIDERATIONS.md: vault lessons (F-038, F-048, F-041), исправлены записи, committed a3d5d1b
+- memory/project_context.md: исправлен стек (→PostgreSQL+pgvector+OpenRouter), SSH alias, deploy command
+- memory/vault_reference.md: создан, добавлен в MEMORY.md
+- Git-deploy на VPS: deploy key на GitHub, сервер переключён с rsync на git pull, проверен push
 
 ## In Progress (not finished)
 
-None. Backlog is empty.
+- /setup reconfigure MCP: пользователю показаны команды для reconnect outline MCP — ответа 'done' ещё не получено
+- phase01-session01-broker-sync: реализация не начата (0/21 задач)
 
 ## Next Session Should
 
-1. Run E2E тесты против прода: `E2E_BASE_URL=https://money.semishan.pro uv run pytest tests/e2e/ -q` — убедиться что все 3 новых T-019 теста проходят
-2. Проверить /recommend на проде — BTD баннер скрыт (рынок не в просадке ≥10%) или виден если просадка активна
-3. Выбрать следующую задачу через `/todo add` или дождаться запроса пользователя
+1. Проверить MCP: `claude mcp list | grep outline` — если не подключён, повторить /setup reconfigure
+2. Запустить `/implement` для `phase01-session01-broker-sync` (21 задача)
+3. T001 первым: `docker compose exec app python -c "import tradernet; help(tradernet.TraderNetAPI)"` — задокументировать реальные имена методов SDK
 
 ## Context That Would Be Lost
 
-- T-019 тесты SKIP локально (requires_e2e marker) — это ожидаемо, не баг. Нужен E2E_BASE_URL для запуска против живого сервера.
-- Flash message в settings роутере изменён с "Settings saved" → "Сохранено" — нужно для assert в test_settings_save_valid.
-- BTD threshold: server-side отклоняет btd_threshold_pct >= 0 с русской ошибкой. HTML input min=-50 max=-1, но сервер проверяет независимо.
-- _drawdown_cache в recommender.py — module-level dict, сбрасывается при рестарте контейнера. Первый GET /recommend после рестарта вызовет yfinance live.
-- DA нашёл и исправил: no-op assert в test_settings_form_submit_non_round_goal ("990001" never в HTML — browser tooltips не в DOM).
+- Git deploy на сервере: `cd /opt/Investments && git pull origin main && docker compose up -d --build --no-deps app`
+- SSH alias: `vps3` (docs/DEPLOY.md)
+- GitHub remote: `git@github.com:vredin/investments.git`
+- Deploy key на сервере: ed25519, comment `github-actions-cv-deploy`
+- IBKR: Flex Query XML upload ONLY — CP Gateway не работает headless на VPS (решение зафиксировано)
+- Freedom Finance: tradernet SDK, perpetual key в .env (FREEDOM_PUBLIC_KEY, FREEDOM_PRIVATE_KEY, FREEDOM_LOGIN, FREEDOM_PASSWORD)
+- Vault fails применены: F-038 (Alembic ID ≤32 chars), F-048 (env-var data migrations при auto-run пропускаются), F-041 (verify deploy с curl)
+- OpenRouter вместо Anthropic: openai SDK + base_url="https://openrouter.ai/api/v1" + OPENROUTER_API_KEY
 
 ## User's Last Unanswered Question
 
-None — пользователь вызвал /orchestrate, pipeline завершён, бэклог пуст.
+- Пользователь выбрал "Reconfigure MCP" в /setup. Показаны команды для reconnect outline. Ожидаем 'done'.
 
 ## Open Questions for User
 
-None.
+- Outline MCP переподключил?
+- /implement запускать сразу после /setup или в отдельной сессии?
