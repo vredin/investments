@@ -124,46 +124,58 @@ If scope is only config/docs/styles — skip this step.
 
 ## STEP 4.8 — Static Analysis Tier 2 (Python projects only)
 
-Tier 1 (ruff + mypy) runs on every commit via Pre-Change Quality Gate. Tier 2 catches what ruff doesn't: cross-file dead code + duplicate code blocks.
+Tier 1 (ruff + mypy) runs every commit. Tier 2 catches what ruff doesn't: cross-file dead code + duplicate code blocks.
 
-**Detect Python project:**
+**This step is self-bootstrapping. User does NOT manually install anything.**
+
+### Detect Python project
 ```bash
-[ -f pyproject.toml ] && grep -q '\[tool\.ruff\|requires-python' pyproject.toml || [ -f setup.py ] || [ -f requirements.txt ]
+([ -f pyproject.toml ] && grep -q "requires-python\|\[tool\.ruff" pyproject.toml) || [ -f setup.py ] || [ -f requirements.txt ]
+```
+If not Python → skip this step.
+
+### Auto-install on first run
+```bash
+# Check if vulture is in dev deps
+if ! uv run vulture --version >/dev/null 2>&1; then
+  echo "Tier 2 first-run: installing vulture + pylint"
+  uv add --dev vulture pylint
+fi
 ```
 
-If NOT Python — skip this step.
+### Auto-create whitelist on first run
+```bash
+if [ ! -f .vulture_whitelist.py ] && ! grep -q '\[tool\.vulture\]' pyproject.toml 2>/dev/null; then
+  echo "Tier 2 first-run: creating .vulture_whitelist.py from template"
+  cp templates/.vulture_whitelist.py.template .vulture_whitelist.py
+  echo ""
+  echo "Created .vulture_whitelist.py with FastAPI/SQLAlchemy/Pydantic/pytest defaults."
+  echo "It silences known-good patterns. You can customize later if needed."
+  echo ""
+fi
+```
 
-**Run Tier 2:**
+### Run Tier 2
 ```bash
 # Dead code (cross-file unused functions/classes/imports)
-uv run vulture src/ --min-confidence 80 --exclude tests/
+uv run vulture src/ .vulture_whitelist.py --min-confidence 80 --exclude tests/,migrations/,alembic/
 
 # Duplicate code blocks (only this checker, not full pylint)
 uv run pylint --disable=all --enable=duplicate-code src/
 ```
 
-**Install hint** (first-time): `uv add --dev vulture pylint`
+### Findings interpretation
+- vulture confidence=100 → almost always real dead code → MUST FIX
+- vulture confidence 80-99 → triage manually → SHOULD FIX (could be framework-implicit usage)
+- pylint duplicate-code → always real (token-based) → SHOULD FIX (extract function/class) or document why intentional
 
-**Whitelist** (mandatory for FastAPI / SQLAlchemy / Pydantic / pytest):
+### What Claude reports back to user
 
-Either `.vulture_whitelist.py` in repo root OR `[tool.vulture]` in `pyproject.toml`:
-```toml
-[tool.vulture]
-ignore_names = ["app", "router", "test_*", "fixture_*", "*Base*"]
-ignore_decorators = ["@app.*", "@router.*", "@pytest.*", "@*.event_handler"]
-min_confidence = 80
-exclude = ["tests/", "migrations/", "alembic/"]
-```
-
-Without whitelist: route handlers, ORM models, Pydantic classes show as false-positive "unused".
-
-**Findings interpretation:**
-- vulture finding at confidence 100 → almost always real dead code → MUST FIX
-- vulture finding at confidence 80-99 → triage manually → SHOULD FIX
-- pylint duplicate-code finding → always real (token-based comparison) → SHOULD FIX (extract function)
-
-**If whitelist is missing for FastAPI/SQLAlchemy stack** — STOP, do not run Tier 2. Output:
-> Tier 2 skipped: missing vulture whitelist. Create `.vulture_whitelist.py` or `[tool.vulture]` in pyproject.toml first. See `.claude/rules/references/static-analysis-tier2.md`.
+After running:
+- Findings sorted by confidence/severity
+- For each high-confidence vulture finding: file:line + suggestion to delete
+- For pylint duplicate findings: pair of file:line ranges + suggestion to extract
+- If many false positives detected → suggest specific entries to add to `.vulture_whitelist.py`
 
 ---
 
