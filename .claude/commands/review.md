@@ -167,12 +167,47 @@ if ! uv run vulture --version >/dev/null 2>&1; then
 fi
 ```
 
-### Auto-create whitelist on first run
+### Auto-configure on first run
+
+vulture config goes in TWO places per priority:
+1. `pyproject.toml [tool.vulture]` — patterns (work via `ignore_names`/`ignore_decorators`)
+2. `.vulture_whitelist.py` — literal symbol names (when patterns don't fit)
+
+Bootstrap injects both if missing.
+
 ```bash
-if [ ! -f .vulture_whitelist.py ] && ! grep -q '\[tool\.vulture\]' pyproject.toml 2>/dev/null; then
+# Inject [tool.vulture] into pyproject.toml if absent
+if [ -f pyproject.toml ] && ! grep -q '\[tool\.vulture\]' pyproject.toml; then
+  echo "Tier 2 first-run: injecting [tool.vulture] block into pyproject.toml"
+  cat >> pyproject.toml <<'TOML_EOF'
+
+[tool.vulture]
+min_confidence = 80
+exclude = ["tests/", "migrations/", "alembic/", ".venv/"]
+ignore_names = [
+  # Pydantic model name patterns (FastAPI request/response schemas)
+  "*Create", "*Update", "*Out", "*In", "*Schema", "*Request", "*Response", "*DTO",
+  # SQLAlchemy model name patterns
+  "*Base*",
+  # pytest discovery
+  "test_*", "fixture_*",
+  # Pydantic config classes
+  "Config", "model_config",
+]
+ignore_decorators = [
+  "@app.*",                 # FastAPI app routes
+  "@router.*",              # FastAPI router routes
+  "@pytest.fixture",        # pytest fixtures by decorator
+  "@pytest.parametrize",
+  "@event.listens_for",     # SQLAlchemy event hooks
+]
+TOML_EOF
+fi
+
+# Copy whitelist file for literal-name suppressions
+if [ ! -f .vulture_whitelist.py ]; then
   echo "Tier 2 first-run: creating .vulture_whitelist.py from template"
   cp templates/.vulture_whitelist.py.template .vulture_whitelist.py
-  echo "Created .vulture_whitelist.py with FastAPI/SQLAlchemy/Pydantic/pytest defaults. Customize later if needed."
 fi
 ```
 
@@ -186,8 +221,12 @@ uv run pylint --disable=all --enable=duplicate-code "$SRC_DIR"
 ```
 
 ### Findings interpretation
-- vulture confidence=100 → almost always real dead code → MUST FIX
-- vulture confidence 80-99 → triage manually → SHOULD FIX (could be framework-implicit usage)
+- vulture confidence=100 → likely real dead code → **TRIAGE FIRST**, then MUST FIX or whitelist
+  - Real dead code: delete it
+  - Intentional phase stub (`raise NotImplementedError`): underscore-prefix params (`_html_path` instead of `html_path`) — Python idiom for unused params, vulture ignores
+  - Framework-implicit (route handler / fixture / event listener): add decorator to `[tool.vulture] ignore_decorators`
+  - Forward-declared API contract: add literal name to `.vulture_whitelist.py`
+- vulture confidence 80-99 → manual triage required → could be framework-implicit, real dead, or pattern miss
 - pylint duplicate-code → always real (token-based) → SHOULD FIX (extract function/class) or document why intentional
 
 ### What Claude reports back to user
