@@ -1,31 +1,32 @@
 #!/usr/bin/env bash
-# launchd-report.sh — wrapper invoked by launchd for daily /report
+# launchd-report.sh — legacy wrapper for /report (kept for existing plist compatibility).
+# New schedules use bin/launchd-runner.sh which is generic + multi-task.
 #
 # Loaded via: ~/Library/LaunchAgents/com.semishan.investments-report.plist
 # Daily at 23:00 local time.
 #
-# What it does:
-# 1. Sources user shell profile (PATH, env vars including OUTLINE_TOKEN if set)
-# 2. cd into project directory
-# 3. Invokes `claude -p "/report"` — single-turn non-interactive mode
-# 4. /report reads project files, builds report, publishes to Outline
-#    (needs MCP outline configured globally via `claude mcp add`)
-# 5. stdout/stderr go to ~/Library/Logs/investments-report.log per plist
+# Invokes Claude via ccs (Claude profile switcher) — same as launchd-runner.sh —
+# so auth/profile match interactive sessions.
 
 set -euo pipefail
 
-# Source shell profile to get PATH, env vars
-# launchd doesn't load these by default
 if [ -f "$HOME/.zshrc" ]; then
-  # Tolerate failures inside zshrc (e.g. nvm initialization in a non-tty)
   source "$HOME/.zshrc" 2>/dev/null || true
 fi
 
-# Resolve claude binary path explicitly (PATH from launchd is minimal)
-CLAUDE_BIN="${CLAUDE_BIN:-/Users/semishan/.local/bin/claude}"
-if [ ! -x "$CLAUDE_BIN" ]; then
-  echo "[$(date)] FAIL: claude binary not found at $CLAUDE_BIN" >&2
-  exit 1
+CCS_PROFILE="${CCS_PROFILE:-personal}"
+
+if command -v ccs >/dev/null 2>&1; then
+  CCS_BIN="$(command -v ccs)"
+  RUNNER=("$CCS_BIN" "$CCS_PROFILE")
+else
+  CLAUDE_BIN="${CLAUDE_BIN:-/Users/semishan/.local/bin/claude}"
+  if [ ! -x "$CLAUDE_BIN" ]; then
+    echo "[$(date)] FAIL: neither ccs nor claude binary found" >&2
+    echo "[$(date)] PATH was: $PATH" >&2
+    exit 1
+  fi
+  RUNNER=("$CLAUDE_BIN")
 fi
 
 PROJECT_DIR="/Users/semishan/PycharmProjects/Investments"
@@ -38,8 +39,7 @@ cd "$PROJECT_DIR"
 
 echo "===================================="
 echo "[$(date)] Running daily /report for $(basename "$PROJECT_DIR")"
+echo "[$(date)] Runner: ${RUNNER[*]}"
 echo "===================================="
 
-# -p flag: print mode — runs single prompt, prints response, exits.
-# /report command is project-defined in .claude/commands/report.md
-exec "$CLAUDE_BIN" -p "/report"
+exec "${RUNNER[@]}" -p "/report"
