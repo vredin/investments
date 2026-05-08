@@ -50,6 +50,7 @@ Use `AskUserQuestion`:
 | **Verify health** | Periodic check; everything should be 1 |
 | **Bootstrap project collection** | MCP connected but project collection missing in Outline |
 | **Register loops** | After Verify health, no /loop schedules detected for this project |
+| **Setup local /report scheduler (launchd)** | macOS, want daily /report without cloud schedule. See docs/SCHEDULING.md. |
 | **Migrate v2→v3** | Existing project with old template version |
 
 ---
@@ -258,6 +259,91 @@ the four lines for copy-paste.
    }
    ```
    Verify health uses this marker; doesn't repeat the prompt next time.
+
+### Setup local /report scheduler (launchd)
+
+Use this mode on macOS when you want daily `/report` to run automatically without
+relying on Anthropic cloud `/schedule` (which currently can't reach Outline).
+For full decision matrix see `docs/SCHEDULING.md`.
+
+1. **Check OS** — if `uname` ≠ Darwin, abort with:
+   ```
+   launchd is macOS-only. For Linux: use systemd timers. For Windows: Task Scheduler.
+   See docs/SCHEDULING.md alternatives.
+   ```
+
+2. **Detect prerequisites:**
+   - `which claude` → must return path; abort if not found, instruct to install/login claude CLI
+   - Project root → use current pwd or read from existing `.setup.json`
+   - User home → `$HOME`
+   - Templates exist: `bin/launchd-report.sh.template`, `templates/launchd-report.plist.template`
+
+3. **Compute label**:
+   ```
+   LAUNCHD_LABEL = "com.<sanitized whoami>.<sanitized project basename>-report"
+   ```
+   Sanitize: lowercase, replace non-alphanumeric with `-`.
+
+4. **Ask user** via `AskUserQuestion`:
+   - "Daily /report time (your local timezone)?"
+   - Options: "21:00", "22:00", "23:00", "Other (specify hour 0-23)"
+
+5. **Render templates** (substitute placeholders):
+   - `bin/launchd-report.sh.template` → `bin/launchd-report.sh`
+     - `{{CLAUDE_BIN}}` → resolved claude path
+     - `{{PROJECT_PATH}}` → absolute project dir
+     - `{{LAUNCHD_LABEL}}` → computed label
+     - `{{REPORT_HOUR}}` → chosen hour
+   - `templates/launchd-report.plist.template` → `~/Library/LaunchAgents/<LAUNCHD_LABEL>.plist`
+     - same placeholders + `{{HOME}}`
+
+6. **Set permissions**:
+   - `chmod +x bin/launchd-report.sh`
+   - `mkdir -p ~/Library/Logs` (idempotent)
+
+7. **Validate plist syntax**:
+   ```
+   plutil -lint ~/Library/LaunchAgents/<LAUNCHD_LABEL>.plist
+   ```
+   Must return `OK`. Abort if fails — corrupted template/render.
+
+8. **Update `.claude/.setup.json`**:
+   ```json
+   {
+     "launchd": {
+       "report": {
+         "label": "<LAUNCHD_LABEL>",
+         "plist_path": "~/Library/LaunchAgents/<LAUNCHD_LABEL>.plist",
+         "wrapper_path": "bin/launchd-report.sh",
+         "schedule": "<HH>:00 daily local",
+         "ts": "<ISO timestamp>"
+       }
+     }
+   }
+   ```
+
+9. **Print user instructions** — exact commands for terminal:
+   ```
+   ✓ Files created. Now in your TERMINAL (not in chat):
+   
+   # 1. Load the schedule:
+   launchctl bootstrap gui/$UID ~/Library/LaunchAgents/<LAUNCHD_LABEL>.plist
+   
+   # 2. Verify it loaded:
+   launchctl list | grep <LAUNCHD_LABEL>
+   
+   # 3. Test manually (runs immediately):
+   bin/launchd-report.sh
+   
+   # 4. Watch logs:
+   tail -f ~/Library/Logs/<LAUNCHD_LABEL>.log
+   
+   To disable later:
+   launchctl bootout gui/$UID ~/Library/LaunchAgents/<LAUNCHD_LABEL>.plist
+   ```
+
+10. **Commit `bin/launchd-report.sh`** to project git (don't commit the plist —
+    it lives in user's LaunchAgents, machine-specific).
 
 ### Migrate v2→v3
 

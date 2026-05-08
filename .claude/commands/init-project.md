@@ -56,6 +56,7 @@ mkdir -p <TARGET_PATH>
 cp -r <TEMPLATE_PATH>/.claude <TARGET_PATH>/
 cp -r <TEMPLATE_PATH>/docs <TARGET_PATH>/
 cp -r <TEMPLATE_PATH>/bin <TARGET_PATH>/
+cp -r <TEMPLATE_PATH>/templates <TARGET_PATH>/
 
 # Copy root files
 cp <TEMPLATE_PATH>/CLAUDE.md <TARGET_PATH>/
