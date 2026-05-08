@@ -134,6 +134,30 @@ Tier 1 (ruff + mypy) runs every commit. Tier 2 catches what ruff doesn't: cross-
 ```
 If not Python → skip this step.
 
+### Detect source directory (don't hardcode src/)
+
+Different Python projects use different layouts: `app/` (FastAPI common), `src/`, `lib/`, `<package_name>/`. Read from STACK.md first, then pyproject.toml, then probe common dirs.
+
+```bash
+SRC_DIR=""
+# 1. STACK.md typecheck_cmd: "uv run mypy app/ --ignore-missing-imports"
+if [ -f docs/STACK.md ]; then
+  SRC_DIR=$(grep -m1 "typecheck_cmd:" docs/STACK.md | grep -oE "mypy [a-zA-Z_/-]+/?" | head -1 | sed 's/mypy //;s|/$||')
+fi
+# 2. pyproject.toml hatch packages or setuptools packages
+if [ -z "$SRC_DIR" ] && [ -f pyproject.toml ]; then
+  SRC_DIR=$(grep -A2 'packages = \[' pyproject.toml | grep -oE '"[a-zA-Z_-]+"' | head -1 | tr -d '"')
+fi
+# 3. Fallback: probe common layouts
+if [ -z "$SRC_DIR" ]; then
+  for d in app src lib server backend; do
+    [ -d "$d" ] && SRC_DIR=$d && break
+  done
+fi
+echo "Tier 2 source dir: $SRC_DIR"
+[ -z "$SRC_DIR" ] && echo "Could not detect source dir, skipping Tier 2" && exit 0
+```
+
 ### Auto-install on first run
 ```bash
 # Check if vulture is in dev deps
@@ -148,20 +172,17 @@ fi
 if [ ! -f .vulture_whitelist.py ] && ! grep -q '\[tool\.vulture\]' pyproject.toml 2>/dev/null; then
   echo "Tier 2 first-run: creating .vulture_whitelist.py from template"
   cp templates/.vulture_whitelist.py.template .vulture_whitelist.py
-  echo ""
-  echo "Created .vulture_whitelist.py with FastAPI/SQLAlchemy/Pydantic/pytest defaults."
-  echo "It silences known-good patterns. You can customize later if needed."
-  echo ""
+  echo "Created .vulture_whitelist.py with FastAPI/SQLAlchemy/Pydantic/pytest defaults. Customize later if needed."
 fi
 ```
 
 ### Run Tier 2
 ```bash
 # Dead code (cross-file unused functions/classes/imports)
-uv run vulture src/ .vulture_whitelist.py --min-confidence 80 --exclude tests/,migrations/,alembic/
+uv run vulture "$SRC_DIR" .vulture_whitelist.py --min-confidence 80 --exclude tests/,migrations/,alembic/
 
 # Duplicate code blocks (only this checker, not full pylint)
-uv run pylint --disable=all --enable=duplicate-code src/
+uv run pylint --disable=all --enable=duplicate-code "$SRC_DIR"
 ```
 
 ### Findings interpretation
