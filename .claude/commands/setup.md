@@ -59,7 +59,30 @@ Use `AskUserQuestion`:
 
 ### Fresh install
 
-1. **Outline MCP setup** — display this exactly to the user, then wait:
+#### 0. Language preference (FIRST step before anything else)
+
+Use `AskUserQuestion`:
+> "Default response language for Claude in this template?"
+- "English"
+- "Bulgarian (Български)"
+- "Ukrainian (Українська)"
+
+Save selection in `.claude/.setup.json`:
+```json
+{
+  "language": "english" | "bulgarian" | "ukrainian"
+}
+```
+
+Update `CLAUDE.md` line:
+```markdown
+## Language
+Respond in: **<chosen>**
+```
+
+This is the default. Per-session override available via prompt («ответь по-английски»). Per-project override: edit `CLAUDE.md` directly.
+
+#### 1. Outline MCP setup — display this exactly to the user, then wait:
    ```
    Open your terminal and run (DO NOT paste your token here in chat):
    

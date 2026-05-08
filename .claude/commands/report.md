@@ -80,6 +80,19 @@ Template:
 
 ---
 
+## STEP 3.5 — humanizer pass (mandatory before persist)
+
+Daily reports are **read by humans** (you in the morning, team if shared).
+Apply `humanizer` skill to the assembled report:
+- Removes em-dash overuse, "delve", "tapestry", "pivotal" patterns
+- Strips sycophantic openers
+- Prevents AI-prose-soup that makes daily logs unreadable
+- Keeps facts intact — only prose style changes
+
+Pass the report draft through `humanizer` skill ONCE before STEP 4.
+
+---
+
 ## STEP 4 — Persist
 
 ### Local

@@ -23,6 +23,74 @@ If user is brainstorming (not yet ready to commit info to disk) — say so expli
 
 ---
 
+## TDD Discipline (HARD RULE — applies to ALL code-touching work)
+
+> Test before code. Period. Commands /fix, /orchestrate, /todo→/orchestrate, /improve-arch→/orchestrate enforce this. Direct edits without going through these commands violate the rule.
+
+**The TDD cycle (5 steps, every time)**:
+
+1. **Write failing test FIRST** — captures the expected behavior. Test references current code state where applicable.
+2. **Run test → MUST FAIL (red)** — proof that the test reproduces the absence/break of the feature. If test passes here, it's testing the wrong thing.
+3. **Implement / fix** — minimum code to make test pass.
+4. **Run test → MUST PASS (green)** — feature is implemented.
+5. **Static analysis** — read commands from `docs/STACK.md`:
+   - `lint_cmd` (ruff / eslint)
+   - `typecheck_cmd` (mypy / tsc)
+   - All errors fixed before commit. Zero tolerance.
+
+**Anti-regression check** (the rule that distinguishes real tests from theatre):
+After step 4, mentally `git revert` the implementation. Would the test FAIL again? If yes — test is real. If no — test is testing implementation details, not behavior. Rewrite assertions to target observable user-facing outcomes.
+
+**Where this is enforced**:
+
+| Command | TDD step location |
+|---|---|
+| `/fix` | STEP 2 (write test), STEP 3 (red), STEP 5 (fix + static), STEP 6 (green) |
+| `/orchestrate` | STEP 4 (test-writer agent, gate=fail), STEP 5 (impl), STEP 6 (static), STEP 7 (green), STEP 7.3 (code-reviewer quality gate) |
+| `/improve-arch` | Produces refactor spec → goes through /todo → /orchestrate which enforces TDD |
+| `/review` | Quality gates including verifying tests exist for changes |
+
+**Direct edits without /fix or /orchestrate**: not enforced. Discouraged for non-trivial changes. PreToolUse hook still requires `[BACKUP]` commit, but TDD must be self-discipline.
+
+---
+
+## Output style routing — token economy + human readability
+
+> Different consumers, different style. Internal output → terse. Human-facing reports → natural.
+
+**caveman-distillate** (token economy — ALWAYS active):
+- All commands load it as default
+- Strips filler words, articles, hedging
+- Fragments OK
+- Output ~65-85% shorter than naive AI prose
+- Applied to: tool calls, status updates, internal artifacts, code review findings
+
+**humanizer** (anti-AI-prose — applied to FINAL human-facing output):
+- Strips «delve», «tapestry», «pivotal», em-dash overuse
+- Removes sycophantic openers («Great question…»)
+- Removes promotional language («seamlessly», «cutting-edge»)
+- Keeps facts/numbers/code intact, only prose changes
+- Applied to:
+  - `/report` daily status (humans read in morning)
+  - `/docs sync` auto-generated content (devs read for onboarding)
+  - `/self-audit` remediation file (you decide which to apply)
+  - `/gaps` audit report (prioritization basis)
+  - `/intent` PRD (contract for team)
+  - `/decompose` ADRs/Epics (architecture review)
+
+**caveman + humanizer together**:
+- caveman fights LLM verbosity at generation time
+- humanizer fights LLM prose-mannerisms at finalization time
+- They compose: terse + natural
+
+**NOT applied with humanizer**:
+- Tables (already structured)
+- Code blocks (semantic, can't paraphrase)
+- Diff blocks in self-audit (exact citations)
+- Direct quotes from source files (in /general VERIFIED claims)
+
+---
+
 ## E2E Test Discipline (HARD RULE)
 
 > Frontend changes without a Playwright e2e test are NOT done. Browser-tool clicking is NOT a test.

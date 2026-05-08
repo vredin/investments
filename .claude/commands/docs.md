@@ -164,6 +164,19 @@ NOT mirrored (transient or project-internal):
 - `docs/FAILS.md` (those flow to **Shared/Fails** via `/fix` auto-publish, not via `/docs publish`)
 - `docs/PATTERNS.md` (publishes to **Shared/Best Practices** only when explicitly flagged via `/improve-arch`)
 
+### STEP 3.5 — humanizer pass on auto-generated docs (mandatory)
+
+ARCHITECTURE.md, API.md, RUNBOOK.md, KNOWLEDGE.md content is **read by humans** (devs onboarding, code reviewers, future you). Apply `humanizer` skill to any text section that auto-generation produced:
+- Module map descriptions
+- Endpoint Notes column
+- ADR rationale
+- RUNBOOK procedures
+
+Tables and code blocks pass through unchanged. Prose paragraphs get humanizer.
+
+This prevents the «sounds like AI wrote it» problem in your project's primary
+reference documents.
+
 ## Mode: `sync --publish` (chained: sync first, then publish)
 
 For use via `/loop` (weekly Monday):

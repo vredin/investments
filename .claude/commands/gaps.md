@@ -93,9 +93,13 @@ Audit the codebase against this checklist. For each item: **PRESENT / PARTIAL / 
 ### Testing
 - [ ] Unit tests cover happy path + error paths (≥70% on critical modules)
 - [ ] Integration tests against real DB (not just mocks)
-- [ ] E2E test for primary user flow
+- [ ] **Playwright `tests/e2e/` directory exists and has at least 1 spec per primary user flow**
+- [ ] **Playwright tests run in CI (not just locally) — check `.github/workflows/*.yml` for `npx playwright test` or equivalent**
+- [ ] **Playwright config (`playwright.config.ts`) targets the real running app, NOT mocks**
+- [ ] **No commits with frontend changes lacking a `tests/e2e/*.spec.ts` in the same commit** (grep recent `[CHANGE]` commits — if any frontend file changed without spec accompanying, flag as gap)
 - [ ] Test data realistic (Unicode, edge lengths, nulls)
-- [ ] Anti-regression: tests fail when feature is reverted
+- [ ] Anti-regression: tests fail when feature is reverted (`git revert` proof)
+- [ ] No browser-MCP usage in commit messages or test files (those are debugging tools, not tests)
 
 ### Operations
 - [ ] CI runs on every push (lint + typecheck + tests)
@@ -204,6 +208,21 @@ Stack: <from STACK.md>
 ## Coverage notes
 - <what I couldn't audit and why>
 ```
+
+---
+
+## STEP 4.5 — humanizer pass on report (mandatory)
+
+The audit report is **read by humans** — you (or team) read it to prioritize work.
+Apply `humanizer` skill to:
+- Critical/significant gap descriptions  
+- Suggested action prose
+- Coverage notes
+
+Tables (gap items, status columns) pass through unchanged.
+Code/grep snippets in suggestions pass through unchanged.
+
+This prevents the «AI-slop audit report» pattern.
 
 ---
 

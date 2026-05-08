@@ -124,6 +124,17 @@ Previous audits and their outcomes:
 
 ---
 
+## STEP 3.5 — humanizer pass on remediation file (mandatory)
+
+The remediation file (`docs/SELF-AUDIT-<DATE>.md`) is **read by humans** — you decide which findings to apply. Apply `humanizer` skill to:
+- Pattern descriptions
+- Root cause prose
+- Rationale lines
+
+Diff blocks (file path, old text, new text) pass through unchanged — those are exact citations.
+
+---
+
 ## STEP 4 — Apply (optional)
 
 If user says `apply finding K` after reading the audit:
