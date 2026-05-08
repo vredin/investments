@@ -8,5 +8,5 @@ def send_message(text: str) -> None:
     raise NotImplementedError("Telegram message delivery — Phase 02")
 
 
-def send_report(report_html: str) -> None:
+def send_report(_report_html: str) -> None:
     raise NotImplementedError("Telegram report delivery — Phase 03")

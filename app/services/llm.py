@@ -42,11 +42,11 @@ def generate_rationale(prompt: str) -> str:
     raise NotImplementedError("Buy rationale generation — Phase 02")
 
 
-def ask_rag_question(question: str, context_chunks: list[str]) -> str:
+def ask_rag_question(_question: str, _context_chunks: list[str]) -> str:
     """Answer a question using retrieved course chunks. Phase 02."""
     raise NotImplementedError("RAG Q&A over course corpus — Phase 02")
 
 
-def generate_monthly_report_narrative(report_data: dict) -> str:
+def generate_monthly_report_narrative(_report_data: dict) -> str:
     """Generate narrative for monthly report. Phase 03."""
     raise NotImplementedError("Monthly report narrative — Phase 03")

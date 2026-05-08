@@ -4,5 +4,5 @@ Phase 01: implement ingest_course_pdf(file_path, db).
 """
 
 
-def ingest_course_pdf(file_path: str, db) -> int:
+def ingest_course_pdf(_file_path: str, _db) -> int:
     raise NotImplementedError("Course PDF ingestion — Phase 01")
