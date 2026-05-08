@@ -13,6 +13,8 @@ Knowledge Base                              ← shared, cross-project
 └── Daily Status       Daily reports — title format: "<project> — YYYY-MM-DD"
 
 Project: <name>                             ← per-project, not reusable
+├── PRDs                PRD-NNN entries (from /intent) — product requirements
+├── Epics               EPIC-NNN entries (from /decompose) — work groups
 ├── Architecture       Mirror of docs/ARCHITECTURE.md
 ├── API Reference      Mirror of docs/API.md
 ├── Runbook            Mirror of docs/RUNBOOK.md
@@ -28,6 +30,8 @@ Project: <name>                             ← per-project, not reusable
 | `/fix` STEP 7 — F-NNN with non-obvious root cause | Knowledge Base / Fails | **AUTO** (no prompt) |
 | `/rule` STEP 9 — R-NNN created | Project: <name> / Rules | **AUTO** |
 | `/improve-arch` — ADR created | Project: <name> / Decisions | **AUTO** |
+| `/intent` — PRD finalized | Project: <name> / PRDs | **AUTO** |
+| `/decompose` — ADR/EPIC created | Project: <name> / Decisions, Epics | **AUTO** (tasks remain local) |
 | `/improve-arch` — pattern flagged `reusable: true` | Knowledge Base / Best Practices | **AUTO** |
 | `/improve-arch` — pattern not flagged reusable | local docs/PATTERNS.md only | not published |
 | `/council` — verdict accepted by user | Knowledge Base / Best Practices | **ASK** (judgment) |

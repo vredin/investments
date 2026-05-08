@@ -1,0 +1,12 @@
+# Epics — logical groups of work
+
+Created via `/decompose <PRD>`. Each epic groups related tasks and is constrained by ADRs.
+
+Format:
+  EPIC-NNN-<slug>.md
+  - parent_prd: PRD-NNN
+  - constrained_by: [ADR-NNN, ADR-NNN]
+  - tasks: [T-NNN, T-NNN, ...]
+  - depends_on: [EPIC-NNN, ...]
+
+EPIC files mirror to Outline `Project: <name> / Epics` (auto-publish).

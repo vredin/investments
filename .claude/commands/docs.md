@@ -24,6 +24,8 @@ Create missing documentation stubs. Idempotent (skip files that exist).
 | `docs/CONTEXT.md` | yes | Template stub (domain glossary) |
 | `docs/RUNBOOK.md` | yes | Template stub (incident response) |
 | `docs/RULES.md` | yes | Business rules template — NEVER answer rate/policy questions without it |
+| `docs/prd/` | yes (empty + .gitkeep) | Created by /intent — Product Requirement Documents |
+| `docs/epics/` | yes (empty + .gitkeep) | Created by /decompose — logical groups of tasks |
 | `docs/CONVENTIONS.md` | yes | Template stub + Python section if Python in stack |
 | `docs/KNOWLEDGE.md` | yes | Empty stub for ADR-summary |
 | `docs/FAILS.md` | yes | Header only — entries grow over time |
@@ -148,6 +150,8 @@ Mirror local `docs/` to Outline `Project: <name>` collection.
    - `docs/KNOWLEDGE.md` → "Knowledge" sub-page
    - `docs/RULES.md` → "Rules" sub-page
    - For each `docs/adr/<NNNN>-*.md` → its own page under "Decisions"
+   - For each `docs/prd/PRD-*.md` → its own page under "PRDs"
+   - For each `docs/epics/EPIC-*.md` → its own page under "Epics"
 3. Update logic:
    - Search Outline for existing doc with matching title or path
    - If exists → `mcp__outline__update_document` with new body

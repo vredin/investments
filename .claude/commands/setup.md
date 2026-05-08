@@ -193,6 +193,8 @@ collection automatically, migrations don't).
    - "Knowledge" — placeholder for docs/KNOWLEDGE.md mirror
    - "Decisions" — placeholder for ADR-NNN entries
    - "Rules" — placeholder for R-NNN entries
+   - "PRDs" — placeholder for PRD-NNN entries (from /intent)
+   - "Epics" — placeholder for EPIC-NNN entries (from /decompose)
 
 6. Save IDs to `.claude/.setup.json`:
    ```json

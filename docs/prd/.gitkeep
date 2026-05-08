@@ -1,0 +1,7 @@
+# Product Requirement Documents (PRD)
+
+Created via `/intent` (greenfield) or by hand from external requirements.
+After PRD is finalized, run `/decompose PRD-NNN` to split into ADRs / Epics / Tasks.
+
+Each PRD is structured per the 10-section template (see /intent STEP 5).
+PRD-NNN files mirror to Outline `Project: <name> / PRDs` (auto-publish).

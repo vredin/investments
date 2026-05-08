@@ -91,6 +91,9 @@ Using the info from STEP 1, edit these files (every `[PROJECT_NAME]`/`[e.g. ...]
 - Replace `[PROJECT_NAME]` in header
 - Leave glossary empty — user fills as project grows
 
+**`docs/prd/`** (new in v3.1) — empty directory with `.gitkeep`. PRDs created via `/intent`.
+**`docs/epics/`** (new in v3.1) — empty directory with `.gitkeep`. Epics created via `/decompose`.
+
 **`docs/RUNBOOK.md`** (new in v3):
 - Replace `[alias]`, `[app]`, `[project_path]` with actual values from STEP 1
 
