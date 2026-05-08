@@ -23,6 +23,38 @@ If user is brainstorming (not yet ready to commit info to disk) — say so expli
 
 ---
 
+## E2E Test Discipline (HARD RULE)
+
+> Frontend changes without a Playwright e2e test are NOT done. Browser-tool clicking is NOT a test.
+
+**Frontend change** = any modification touching:
+- `*.tsx`, `*.jsx`, `*.vue`, `*.svelte`, `*.html`, `*.css`, `*.scss`
+- Route handlers / API endpoints called from the frontend (auth, data, payment, upload)
+- User-facing flows in any form
+
+**Required**: a Playwright `.spec.ts` file in `tests/e2e/` (or whatever path `docs/STACK.md` declares) that:
+- Reproduces the user-facing flow end-to-end against the real running app
+- FAILS before the change (red)
+- PASSES after the change (green)
+- FAILS again after `git revert` of the implementation (anti-regression)
+
+The test goes in the **same commit** as the implementation. A frontend `[CHANGE]` commit with no `tests/e2e/*.spec.ts` in the diff is not done.
+
+**Banned phrases as substitutes for an e2e test**:
+- "Я проверил в браузере, работает"
+- "Кликнул, всё ok"
+- "Запросил через chrome MCP, выглядит правильно"
+- "Скриншот в браузере подтверждает"
+- "Это маленькая правка, тест не нужен"
+- "Это тривиальное изменение"
+- "В UI визуально работает"
+
+**Browser-MCP tools (`mcp__claude-in-chrome__*` and similar) are for DEBUGGING, never as a test substitute.** See `.claude/skills/webapp-testing/SKILL.md` for the explicit allowed/forbidden boundary.
+
+**If the project doesn't have Playwright set up yet** — set it up as part of the first frontend task that needs e2e coverage. Don't defer. The setup overhead amortizes after the second test.
+
+---
+
 ## Business Logic Discipline (HARD RULE)
 
 Before answering any numerical or policy question:
@@ -278,6 +310,44 @@ Tested by: <command>"
 > Do NOT use `--amend` — Claude Code prohibits amending commits.
 
 ---
+
+## Commit message taxonomy (HARD RULE)
+
+Every commit MUST start with one of:
+
+| Prefix | When | Example |
+|---|---|---|
+| `[BACKUP]` | Pre-change checkpoint, before editing files | `[BACKUP] Pre-change: T-005 Telegram bot \| Risks: ... \| Scope: app/bot/` |
+| `[CHANGE]` | Implementation completed, paired with prior `[BACKUP]` | `[CHANGE] T-005: Telegram bot bridge` |
+| `[FIX]` | Bug fix completed via `/fix` protocol (failing-test-first) | `[FIX] F-007: bcrypt corruption from env_file mount` |
+| `[SEC]` | Security fix verified by Rex | `[SEC] xlsx zip-bomb size cap + magic bytes` |
+| `[META]` | TASK.md, archive, planning artifacts (no code change) | `[META] T-018 archived` |
+| `[PROCESS]` | Workflow rules, hooks, settings, template updates | `[PROCESS] Add commit-msg validation hook` |
+| `[HANDOFF]` | Session-end handoff doc | `[HANDOFF] Session end — 3 tasks done` |
+| `[RULES]` | Business rule via `/rule` command (auto-generated) | `[RULES] Add R-014: senior coach 1500 UAH/training` |
+
+The PreToolUse hook on `Bash` matcher blocks `git commit -m` when message lacks valid prefix.
+
+## Bug fix triggers (HARD RULE — Claude must invoke `/fix`, not edit directly)
+
+> Bypassing `/fix` causes: no failing test, no FAILS.md entry, no anti-regression
+> guarantee, no Diablo attack on the diagnosis. The `/fix` protocol exists to
+> prevent the same bug from recurring silently.
+
+When the user message contains any of these phrases (case-insensitive):
+
+- "fix", "bug", "broken", "doesn't work", "not working"
+- "сломано", "не работает", "падает", "ошибка"
+- "regression", "broke after", "stopped working"
+- "почему X не Y", "should be Z but isn't"
+- direct error reports: traceback, stack trace, error code, exception class
+
+Claude MUST:
+1. **Stop**. Do not jump into code edits.
+2. Reply: "This looks like a bug fix. Use `/fix` to ensure failing-test-first + Diablo + FAILS.md entry. Run `/fix <bug description>` to start. If you want to skip the protocol for a trivial typo, say so explicitly."
+3. Wait for user direction.
+
+The user can override (rarely): "skip /fix, just fix the typo on line N" → then proceed inline. But default behavior is route to `/fix`.
 
 ## Bug Fix Protocol (mandatory)
 1. Check `docs/FAILS.md` for similar past failures FIRST
