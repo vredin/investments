@@ -23,6 +23,48 @@ If user is brainstorming (not yet ready to commit info to disk) — say so expli
 
 ---
 
+## Project file overwrite discipline (HARD RULE)
+
+> Bug discovered 2026-05-08: blanket `cp -f $TPL/CLAUDE.md $PROJ/CLAUDE.md` during template propagation overwrote project-customized values (`Investment Assistant` / `Russian` reverted to `[PROJECT_NAME]` / `[Ukrainian / English / ...]`). Same risk for any per-project file.
+
+**`cp -f` is BANNED on these files** (always project-customized after `/init-project`):
+
+| File | Project-specific content |
+|---|---|
+| `CLAUDE.md` | Project name, language, project-specific stack, command list customizations |
+| `.claude/rules/project.md` | Stack details, deploy info, secrets handling per project |
+| `.claude/settings.json` | User permissions block, hooks customizations |
+| `.claude/.setup.json` | Outline collection IDs, registered loops, language preference |
+| `docs/STACK.md` | Real lint/test/db/ssh values |
+| `docs/CONTEXT.md` | Filled domain glossary |
+| `docs/RUNBOOK.md` | Filled SSH alias / container names / failure scenarios |
+| `docs/RULES.md` | Real R-NNN business rules |
+| `docs/KNOWLEDGE.md` | Architectural decisions specific to project |
+| `docs/FAILS.md` | Project-specific F-NNN entries |
+| `docs/PATTERNS.md` | Project-specific patterns |
+| `docs/TASK.md` | Active backlog |
+| `docs/DEPLOY.md` | Real server config |
+
+**Allowed approaches** (in order of preference):
+
+1. **Edit tool with surgical `old_string`/`new_string`** — only changes what needs changing, preserves rest
+2. **`cp -n` (no-clobber)** — only copies if file doesn't exist; safe for new projects, no-op for existing
+3. **Conditional copy with grep** — `grep -q '\[PROJECT_NAME\]' file && cp -f tpl file` — only overwrite if still placeholder
+4. **`cp -f`** — ONLY for files NOT in the table above (template-defined files like commands, agents, skills, hooks)
+
+**Specific rule for propagation scripts (running cp from template to projects)**:
+- For each file in the table above: use `cp -n`, NOT `cp -f`
+- If you intentionally want to update one of these — use `Edit` to merge changes, never `cp -f`
+- Exception: when you've just verified via grep that the file STILL has placeholders (means it was never customized) — then `cp -f` is OK
+
+**The mental model**: template files are categorized as either:
+- **Template-defined** (cp -f safe): commands, agents, skills, hooks, scripts in `bin/`, examples
+- **Project-customized** (cp -f BANNED): everything in the table above
+
+When in doubt — assume project-customized and use Edit.
+
+---
+
 ## TDD Discipline (HARD RULE — applies to ALL code-touching work)
 
 > Test before code. Period. Commands /fix, /orchestrate, /todo→/orchestrate, /improve-arch→/orchestrate enforce this. Direct edits without going through these commands violate the rule.

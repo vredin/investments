@@ -74,6 +74,25 @@ Cluster gathered evidence by category:
 | Skill not loaded when needed | task type matches skill, but not loaded | ≥ 3 occurrences |
 | Command missing | shell commands run that should be a slash command | same shell pattern ≥ 5 times |
 | Time wasted in rabbit holes | Stuck Protocol triggered | every occurrence is a finding |
+| **Banned `cp -f` on project files** | `cp -f` invocation on any file in the project-customized list (see workflow.md → "Project file overwrite discipline") | every occurrence is a finding (HIGH severity) |
+
+### Specific detection: `cp -f` on customized files
+
+```bash
+# Search recent shell commands and commit messages for the violation pattern
+PROTECTED_FILES="CLAUDE.md|project\.md|settings\.json|\.setup\.json|STACK\.md|CONTEXT\.md|RUNBOOK\.md|RULES\.md|KNOWLEDGE\.md|FAILS\.md|PATTERNS\.md|TASK\.md|DEPLOY\.md"
+
+# In commit messages and shell history (if accessible):
+git log --since="$SINCE" --pretty="%B" | grep -E "cp -f.*($PROTECTED_FILES)" | head -10
+
+# In session-log if available:
+grep -E "cp -f.*($PROTECTED_FILES)" .claude/session-log.jsonl 2>/dev/null | head -10
+```
+
+For each match → finding HIGH severity:
+- File path violated (full match)
+- Suggest fix: «Replace with Edit tool surgical change OR `cp -n` (no-clobber)»
+- Reference: workflow.md → "Project file overwrite discipline"
 
 For each category, generate finding:
 ```
