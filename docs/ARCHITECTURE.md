@@ -60,6 +60,7 @@ app/
 | `recommendations` | Monthly buy plan by (month, ticker), with `executed` flag |
 | `progress_snapshots` | Monthly capital-vs-goal tracking |
 | `channel_signals` | Telegram signal embeddings (pgvector, dim=1024) |
+| `course_chunks` | Course content chunks with pgvector embeddings — defined in models.py:127 (CourseChunk class). Currently unreferenced by any service; reserved for `ingestion/course.py` once implemented |
 | `config` | Key-value app settings |
 
 ## Background Jobs (APScheduler)

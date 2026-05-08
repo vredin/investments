@@ -73,7 +73,9 @@
 
 ## Admin
 
+> **Auth note**: routes use `login_required` only — there is no separate admin role. Any logged-in user can hit these endpoints. Single-user app today; if multi-user planned, add explicit admin check.
+
 | Method | Path | Auth | Response | Notes |
 |--------|------|------|----------|-------|
-| POST | `/admin/ingest-course` | yes (admin) | JSON | Ingest course content → pgvector |
-| POST | `/admin/ingest-channels` | yes (admin) | JSON | Ingest Telegram signals → pgvector |
+| POST | `/admin/ingest-course` | yes | Redirect | **STUB** — currently returns flash "Course ingestion not implemented yet"; planned to accept PDF upload → `ingestion/course.py` → `course_chunks` table |
+| POST | `/admin/ingest-channels` | yes | Redirect | **STUB** — currently returns flash "Channel ingestion not implemented yet"; planned to accept HTML export → `ingestion/channels.py` → `channel_signals` table |
