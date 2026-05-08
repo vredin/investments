@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# launchd-runner.sh — generic wrapper invoked by launchd for any scheduled Claude prompt.
+# Generated from this template by `/setup` → "Setup launchd schedules".
+#
+# Usage (from launchd plist):
+#   launchd-runner.sh "/report"
+#   launchd-runner.sh "/docs sync --publish"
+#   launchd-runner.sh "/self-audit"
+#   launchd-runner.sh "/self-audit --global"
+#
+# What it does:
+# 1. Sources user shell profile (PATH, env vars including OUTLINE_TOKEN if exported)
+# 2. cd into project directory
+# 3. Invokes `claude -p "<prompt>"` — single-turn non-interactive mode
+# 4. stdout/stderr go to ~/Library/Logs/<plist-label>.log per plist
+
+set -euo pipefail
+
+PROMPT="${1:?prompt required as first argument}"
+
+# Source shell profile to get PATH, env vars (launchd doesn't load these by default).
+if [ -f "$HOME/.zshrc" ]; then
+  source "$HOME/.zshrc" 2>/dev/null || true
+fi
+
+# Resolve claude binary path explicitly (PATH from launchd is minimal)
+CLAUDE_BIN="${CLAUDE_BIN:-{{CLAUDE_BIN}}}"
+if [ ! -x "$CLAUDE_BIN" ]; then
+  echo "[$(date)] FAIL: claude binary not found at $CLAUDE_BIN" >&2
+  exit 1
+fi
+
+PROJECT_DIR="{{PROJECT_PATH}}"
+if [ ! -d "$PROJECT_DIR" ]; then
+  echo "[$(date)] FAIL: project dir not found: $PROJECT_DIR" >&2
+  exit 1
+fi
+
+cd "$PROJECT_DIR"
+
+echo "===================================="
+echo "[$(date)] Running '$PROMPT' for $(basename "$PROJECT_DIR")"
+echo "===================================="
+
+exec "$CLAUDE_BIN" -p "$PROMPT"

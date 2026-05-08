@@ -50,7 +50,7 @@ Use `AskUserQuestion`:
 | **Verify health** | Periodic check; everything should be 1 |
 | **Bootstrap project collection** | MCP connected but project collection missing in Outline |
 | **Register loops** | After Verify health, no /loop schedules detected for this project |
-| **Setup local /report scheduler (launchd)** | macOS, want daily /report without cloud schedule. See docs/SCHEDULING.md. |
+| **Setup launchd schedules** | macOS, want any subset of default schedules (/report, /docs sync, /self-audit, /self-audit --global) without cloud schedule. See docs/SCHEDULING.md. |
 | **Migrate v2→v3** | Existing project with old template version |
 
 ---
@@ -260,90 +260,136 @@ the four lines for copy-paste.
    ```
    Verify health uses this marker; doesn't repeat the prompt next time.
 
-### Setup local /report scheduler (launchd)
+### Setup launchd schedules
 
-Use this mode on macOS when you want daily `/report` to run automatically without
-relying on Anthropic cloud `/schedule` (which currently can't reach Outline).
+Use this mode on macOS when you want any subset of default schedules to run
+automatically without relying on Anthropic cloud `/schedule`. Pattern: ONE
+generic wrapper `bin/launchd-runner.sh`, multiple plists each invoking it
+with a different prompt at a different time.
+
 For full decision matrix see `docs/SCHEDULING.md`.
 
-1. **Check OS** — if `uname` ≠ Darwin, abort with:
-   ```
-   launchd is macOS-only. For Linux: use systemd timers. For Windows: Task Scheduler.
-   See docs/SCHEDULING.md alternatives.
-   ```
+#### 1. Check OS
+If `uname` ≠ Darwin, abort:
+```
+launchd is macOS-only. For Linux: use systemd timers. For Windows: Task Scheduler.
+See docs/SCHEDULING.md alternatives.
+```
 
-2. **Detect prerequisites:**
-   - `which claude` → must return path; abort if not found, instruct to install/login claude CLI
-   - Project root → use current pwd or read from existing `.setup.json`
-   - User home → `$HOME`
-   - Templates exist: `bin/launchd-report.sh.template`, `templates/launchd-report.plist.template`
+#### 2. Detect prerequisites
+- `which claude` → must return path; abort if not found
+- Project root → current pwd or read from `.setup.json`
+- User home → `$HOME`
+- Templates: `bin/launchd-runner.sh.template`, `templates/launchd-task.plist.template`
 
-3. **Compute label**:
-   ```
-   LAUNCHD_LABEL = "com.<sanitized whoami>.<sanitized project basename>-report"
-   ```
-   Sanitize: lowercase, replace non-alphanumeric with `-`.
+#### 3. Render the generic runner (idempotent)
+If `bin/launchd-runner.sh` doesn't exist OR contains template placeholders:
+- Render `bin/launchd-runner.sh.template` → `bin/launchd-runner.sh`
+  - `{{CLAUDE_BIN}}` → resolved claude path
+  - `{{PROJECT_PATH}}` → absolute project dir
+- `chmod +x bin/launchd-runner.sh`
 
-4. **Ask user** via `AskUserQuestion`:
-   - "Daily /report time (your local timezone)?"
-   - Options: "21:00", "22:00", "23:00", "Other (specify hour 0-23)"
+If runner already exists with concrete values → skip render, reuse.
 
-5. **Render templates** (substitute placeholders):
-   - `bin/launchd-report.sh.template` → `bin/launchd-report.sh`
-     - `{{CLAUDE_BIN}}` → resolved claude path
-     - `{{PROJECT_PATH}}` → absolute project dir
-     - `{{LAUNCHD_LABEL}}` → computed label
-     - `{{REPORT_HOUR}}` → chosen hour
-   - `templates/launchd-report.plist.template` → `~/Library/LaunchAgents/<LAUNCHD_LABEL>.plist`
-     - same placeholders + `{{HOME}}`
+#### 4. Discover existing schedules
+```bash
+launchctl list | grep "com.$(whoami).$(basename $(pwd))-" || echo "  none registered"
+```
+Show user which schedules are already loaded; don't recreate them.
 
-6. **Set permissions**:
-   - `chmod +x bin/launchd-report.sh`
-   - `mkdir -p ~/Library/Logs` (idempotent)
+#### 5. Ask user which schedules to register
+Use `AskUserQuestion` with `multiSelect: true`:
 
-7. **Validate plist syntax**:
-   ```
-   plutil -lint ~/Library/LaunchAgents/<LAUNCHD_LABEL>.plist
-   ```
-   Must return `OK`. Abort if fails — corrupted template/render.
+> Which schedules to register for this project?
 
-8. **Update `.claude/.setup.json`**:
-   ```json
-   {
-     "launchd": {
-       "report": {
-         "label": "<LAUNCHD_LABEL>",
-         "plist_path": "~/Library/LaunchAgents/<LAUNCHD_LABEL>.plist",
-         "wrapper_path": "bin/launchd-report.sh",
-         "schedule": "<HH>:00 daily local",
-         "ts": "<ISO timestamp>"
-       }
-     }
-   }
-   ```
+Options (each labeled with default time):
+1. `/report` daily — default 23:00
+2. `/docs sync --publish` weekly Monday — default 09:00
+3. `/self-audit` weekly Friday — default 10:00
+4. `/self-audit --global` 1st & 15th — default 11:00
 
-9. **Print user instructions** — exact commands for terminal:
-   ```
-   ✓ Files created. Now in your TERMINAL (not in chat):
-   
-   # 1. Load the schedule:
-   launchctl bootstrap gui/$UID ~/Library/LaunchAgents/<LAUNCHD_LABEL>.plist
-   
-   # 2. Verify it loaded:
-   launchctl list | grep <LAUNCHD_LABEL>
-   
-   # 3. Test manually (runs immediately):
-   bin/launchd-report.sh
-   
-   # 4. Watch logs:
-   tail -f ~/Library/Logs/<LAUNCHD_LABEL>.log
-   
-   To disable later:
-   launchctl bootout gui/$UID ~/Library/LaunchAgents/<LAUNCHD_LABEL>.plist
-   ```
+For each chosen → ask follow-up `AskUserQuestion`:
+> Time for `/report`?
+- "Default (23:00)"
+- "21:00"
+- "22:00"
+- "Other (specify)"
 
-10. **Commit `bin/launchd-report.sh`** to project git (don't commit the plist —
-    it lives in user's LaunchAgents, machine-specific).
+(Skip follow-up for `/self-audit --global` — bi-weekly time is rarely customized.)
+
+#### 6. For each chosen schedule, render its plist
+- Compute label: `com.<whoami>.<project>-<task>` (lowercase, sanitized)
+  - `<task>` = `report` / `docs-sync` / `self-audit` / `self-audit-global`
+- Build `<CALENDAR_INTERVAL>` XML based on schedule type:
+  - **Daily** (e.g. /report): single `<dict>` with `Hour`/`Minute`
+  - **Weekly** (e.g. /docs sync Mon, /self-audit Fri): single `<dict>` with `Weekday`/`Hour`/`Minute`
+    - Weekday values: Sun=0, Mon=1, Tue=2, Wed=3, Thu=4, Fri=5, Sat=6
+  - **Bi-weekly** (e.g. /self-audit --global on 1st & 15th): `<array>` of two `<dict>` entries with `Day`/`Hour`/`Minute`
+- Render `templates/launchd-task.plist.template` → `~/Library/LaunchAgents/<label>.plist`
+  - `{{LAUNCHD_LABEL}}` → label
+  - `{{PROJECT_PATH}}` → absolute project path
+  - `{{HOME}}` → `$HOME`
+  - `{{PROMPT}}` → exact /command (e.g. `/report`, `/docs sync --publish`)
+  - `{{CALENDAR_INTERVAL}}` → constructed XML block from above
+
+#### 7. Validate every rendered plist
+```bash
+for plist in <list of rendered plists>; do
+  plutil -lint "$plist" || abort "FAIL: $plist invalid"
+done
+```
+
+#### 8. Ensure logs dir
+```bash
+mkdir -p ~/Library/Logs
+```
+
+#### 9. Update `.claude/.setup.json`
+```json
+{
+  "launchd": {
+    "schedules": [
+      {
+        "label": "com.<user>.<project>-report",
+        "plist_path": "~/Library/LaunchAgents/com.<user>.<project>-report.plist",
+        "wrapper_path": "bin/launchd-runner.sh",
+        "prompt": "/report",
+        "cadence": "daily 23:00 local",
+        "ts": "<ISO>"
+      },
+      ...
+    ]
+  }
+}
+```
+(Replace existing `launchd.schedules` array entirely with current registrations
+— ensures stale entries don't accumulate.)
+
+#### 10. Print user instructions
+```
+✓ Files created for N schedules. In your TERMINAL (not in chat):
+
+# Load each schedule:
+launchctl bootstrap gui/$UID ~/Library/LaunchAgents/<label-1>.plist
+launchctl bootstrap gui/$UID ~/Library/LaunchAgents/<label-2>.plist
+...
+
+# Verify loaded:
+launchctl list | grep com.<user>.<project>-
+
+# Test any schedule manually (runs immediately):
+bin/launchd-runner.sh "/report"
+bin/launchd-runner.sh "/docs sync --publish"
+
+# Watch logs:
+tail -f ~/Library/Logs/<label>.log
+
+# Disable any single schedule:
+launchctl bootout gui/$UID ~/Library/LaunchAgents/<label>.plist
+```
+
+#### 11. Commit `bin/launchd-runner.sh` to project git
+(Don't commit any plists — they live in `~/Library/LaunchAgents/`, machine-specific.)
 
 ### Migrate v2→v3
 
