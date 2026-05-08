@@ -80,9 +80,7 @@ Based on the analysis:
 - **DO NOT include any Claude Code footer or co-authorship attribution**
 
 \`\`\`bash
-# List the specific files you changed — never `git add .` / `git add -A`
-# (can stage secrets like .env.production or unrelated files)
-git add path/to/file1 path/to/file2
+git add .
 git commit -m "[Single sentence summary of what was done]"
 \`\`\`
 
@@ -121,7 +119,7 @@ After submission, show:
 
 - **Check for .PLAN.md FIRST** before analyzing git changes
 - **NEVER run additional exploration commands** beyond checking .PLAN.md, git status/diff/log
-- **Stage specific files** by path before committing — never `git add .` / `git add -A` (can stage secrets or unrelated files)
+- **Stage all changes** with `git add .` before committing
 - **Single sentence summary**: Keep commit message concise and focused
 - **Follow repo patterns**: Check recent commits with `git log` to match style
 - **NO Claude footer**: Do not add any attribution or generated-by footer

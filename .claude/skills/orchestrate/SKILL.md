@@ -54,36 +54,7 @@ Step 4: UPDATE BACKLOG
   Append to docs/archive/TASK_ARCHIVE.md with commit hash
   Append to docs/timeline.md
 
-Step 5: VAULT LEARNING REVIEW (mandatory — do not skip)
-  Threshold (prevents junk entries): only write a vault entry if BOTH hold —
-    (a) the fix/solution is non-obvious (would not be found by reading docs or grepping stdlib), AND
-    (b) a second project on a different stack could plausibly hit the same issue.
-  If either fails → log "no vault entry: <reason>" and move on. Per-session cap: max 3 vault writes.
-
-  Ask: did this task surface a reusable cross-project lesson that meets the threshold?
-    - Non-obvious fix reusable across projects → vault-write skill, type=fail
-    - Reusable working solution / architecture pattern → vault-write skill, type=pattern
-    - Wrong assumption about 3rd-party API / service / config → vault-write skill, type=gotcha
-
-  If yes: invoke vault-write skill (`.claude/skills/vault-write/SKILL.md`)
-    - Full 8-step protocol: dedup check → ID → create → log → hot.md → commit → report
-    - One CRUD op = one commit in the vault repo
-
-  INTERACTIVE GATE HANDLING (critical — orchestrate is autonomous, vault-write is not):
-    vault-write blocks on AskUserQuestion for two conditions —
-      (1) dedup grep hit with >70% topical overlap
-      (2) contradiction with an existing entry from another project
-    The orchestrator MUST NOT block on these. On either gate:
-      - Abort the vault-write for this cycle (do not commit a half-written entry)
-      - Append one line to `artifacts/conductor/session.jsonl`:
-        `{"ts":"…","task":"T-NNN","vault-escalation-needed":"dedup|contradiction","candidate-title":"…","existing-id":"F-NNN"}`
-      - Continue with Step 6 (NEXT) — user reviews escalation queue later
-    Never silently pick branch (a) / (b) / (c) on contradictions — that corrupts the vault's authorship wall.
-
-  If the lesson is project-specific only (schema names, local services): append to docs/KNOWLEDGE.md instead
-  If nothing reusable: log "no vault entry" in artifacts/conductor/session.jsonl and continue
-
-Step 6: NEXT
+Step 5: NEXT
   Check docs/TASK.md for more PLANNED items
   If exist → back to Step 1
   If empty → run /audit → continue from new tasks

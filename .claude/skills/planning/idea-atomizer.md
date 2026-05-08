@@ -1,7 +1,3 @@
----
-name: idea-atomizer
-description: Deconstructs any idea, concept, plan, business, hypothesis, or proposal into atomic components and rigorously stress-tests each one for inconsistencies, flaws, hidden assumptions, and contradictions. Use when a user wants to: critically analyze an idea, find holes in a plan, pressure-test a hypothesis, challenge a business model, evaluate a strategy, identify logical fallacies, or get a Devil's Advocate breakdown of any concept. Triggers on phrases like "разбери идею", "найди слабые места", "покритикуй", "что не так с", "stress-test", "tear apart", "find flaws", "Devil's Advocate", "атомизируй", "проверь идею", "найди нестыковки".
----
 
 # Idea Atomizer
 

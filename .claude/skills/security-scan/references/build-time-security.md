@@ -1,7 +1,3 @@
----
-name: api-security-best-practices
-description: "Implement secure API design patterns including authentication, authorization, input validation, rate limiting, and protection against common API vulnerabilities"
----
 
 # API Security Best Practices
 
@@ -902,6 +898,5 @@ app.post('/api/users', async (req, res) => {
 - [Node.js Security Checklist](https://blog.risingstack.com/node-js-security-checklist/)
 - [API Security Checklist](https://github.com/shieldfy/API-Security-Checklist)
 
----
 
 **Pro Tip:** Security is not a one-time task - regularly audit your APIs, keep dependencies updated, and stay informed about new vulnerabilities!

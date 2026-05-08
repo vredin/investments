@@ -52,3 +52,7 @@ Course/
 
 # Old specs dir at repo root (superseded by .spec_system/)
 /specs/
+.claude/cache/
+.claude/.setup.json
+.rex-findings.json
+docs/handoff/.last-checkpoint

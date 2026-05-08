@@ -1,5 +1,45 @@
 # Development Workflow Rules
 
+## Persistence Discipline (HARD RULE)
+
+> Conversation memory is not persistence. /compact and /clear erase it. Files survive.
+
+Phrases like "записал", "added to TODO", "noted", "I'll remember", "зафиксирую" are BANNED unless the same turn includes a tool call that writes to disk.
+
+**Map: claim → required tool call**
+
+| Claim | Required action |
+|---|---|
+| "added to TODO" / "записал в задачи" | `/todo add <description>` (creates docs/specs/T-NNN-*.md) |
+| "noted this decision" / "запомнил" | Edit `docs/KNOWLEDGE.md` or create `docs/adr/<NNNN>-*.md` |
+| "captured the rule" / "запомнил ставку" | `/rule <statement>` (creates row in docs/RULES.md) |
+| "I'll remember this failure" / "зафиксирую этот баг-паттерн" | Edit `docs/FAILS.md` |
+| "this is captured for next time" | At minimum: append to `docs/handoff.md` or `docs/PATTERNS.md` |
+
+If user is brainstorming (not yet ready to commit info to disk) — say so explicitly:
+> "This is NOT persisted yet. To save: run /todo / /rule / Edit docs/KNOWLEDGE.md."
+
+**Never let the user believe something is recorded when it isn't.**
+
+---
+
+## Business Logic Discipline (HARD RULE)
+
+Before answering any numerical or policy question:
+1. Read `docs/RULES.md`
+2. grep for the subject
+3. If found → cite the `R-NNN` row
+4. If NOT found → STOP. Refuse to invent. Output the "RULE NOT IN docs/RULES.md" message from CLAUDE.md.
+
+This rule applies even when:
+- User seems to expect a number ("какая ставка у тренера?")
+- The number was discussed earlier in this conversation (conversation memory ≠ source)
+- A "similar" rule exists for a different subject (do not infer by analogy)
+
+Refusing to invent is the correct answer. The cost of "I don't know, show me where this is defined" is much lower than the cost of inventing the wrong number.
+
+---
+
 ## No Deferral Policy (applies to ALL work)
 
 If you CAN solve a problem — solve it. Do not defer to the user.
@@ -30,36 +70,16 @@ If you CAN solve a problem — solve it. Do not defer to the user.
 
 A session = one focused work block within a safe context window.
 
-### Context Budget (HARD RULES — enforced, not suggested)
+### Context Budget
 
-You work best at the top of your context window. The old rule "write handoff at ~60%" was soft — routinely ignored until auto-compact fired silently at 95% and state was lost. Replaced with counter-based hard rules below.
+You work best at the top of your context window. Track TWO things:
 
-**Rule 1 — Periodic context check**
-Every **20 tool calls** run `/context` (or recall the last report). No skipping. If you forget, the PreCompact hook will snapshot your transcript to `.claude/session-log/` — that's the audit trail, not a free pass.
+**Context window %** (primary — check with `/context`):
+- **~60%**: write handoff.md, run `/compact` proactively
+- **~80%**: finish current task ONLY, then `/clear` + new session
+- **Never** wait for auto-compact at 95% — quality is already degraded
 
-**Rule 2 — Context thresholds (hard, not advisory)**
-| Context % | Action | Allowed to start new task? |
-|-----------|--------|----------------------------|
-| **<40%**   | Normal work | ✅ yes |
-| **40–50%** | Finish current step, then write `docs/handoff.md` before next tool call that starts new work | ⚠ only trivial |
-| **>50%**   | **STOP**. Write/update handoff.md NOW. `/compact` after handoff is written. | ❌ no |
-| **>70%**   | Emergency: commit `[WIP]` if mid-task, write skeleton handoff, `/compact` immediately | ❌ no |
-| **>90%**   | You failed to follow the rule above. Write whatever state you can, then `/clear`. Expect loss. | ❌ no |
-
-**Rule 3 — Handoff write order (never skip a step)**
-When threshold is crossed, handoff protocol is NOT optional:
-1. Finish the current tool call (don't abort mid-edit)
-2. Commit anything dirty as `[WIP]` or `[CHANGE]`
-3. Write `docs/handoff.md` using the template in § Session End
-4. **Only then** run `/compact`
-
-**Rule 4 — Never start a new task above 50%**
-No "I'll just quickly check X". That's how 50% becomes 75% becomes 95%-silent-compact. Finish current, handoff, compact. Then take the new task in fresh context.
-
-**Rule 5 — PreCompact hook is a safety net, not a substitute**
-`.claude/hooks/pre-compact-snapshot.sh` fires on every compact (manual and auto) and dumps the transcript to `.claude/session-log/compact-*.jsonl`. That means nothing is _permanently_ lost — but grepping a raw transcript is 10x slower and uglier than reading a properly-written handoff.md. Write the handoff.
-
-**Activity counters (secondary backup — use when `/context` isn't available):**
+**Activity counters** (secondary safety net):
 
 | Metric | Warning | Hard limit |
 |--------|---------|------------|
@@ -73,27 +93,15 @@ No "I'll just quickly check X". That's how 50% becomes 75% becomes 95%-silent-co
 
 ### Surviving Compaction (auto-recovery)
 
-Context compaction WILL happen. Two layers of defense:
+Context compaction WILL happen. Prepare for it so nothing is lost:
 
-**Layer 1 — handoff.md (the primary, Claude-written)**
-1. **Before compaction** — write `docs/handoff.md` with current state per the hard rules above
-2. **Compact** — run `/compact` (manual is always preferred over auto)
-3. **After compaction** — Claude reads `docs/handoff.md` (see Session Start), resumes, then deletes it
-4. handoff.md is external memory that survives compaction. The user should NOT need to start a new session.
+1. **Before compaction** — write `docs/handoff.md` with current state (what's done, what remains, decisions made)
+2. **Compact** — run `/compact` or let auto-compaction happen
+3. **After compaction** — Claude reads `docs/handoff.md` (it's in Session Start rules), picks up context, continues work
+4. **Delete handoff.md** after picking up context
 
-**Layer 2 — PreCompact hook (the automatic, hook-written)**
-`.claude/hooks/pre-compact-snapshot.sh` fires on **every** compact event (both manual and auto). It:
-- Copies the raw transcript to `.claude/session-log/compact-<trigger>-<ts>-<session>.jsonl`
-- Appends one line to `.claude/session-log/compact-audit.log`
-- Prints a POST-COMPACT CHECKLIST to stdout (visible in the next turn after compaction)
-
-This is purely defensive. The hook **cannot block compaction** (Claude Code runs PreCompact async and ignores exit codes), so it's not a substitute for writing handoff.md yourself. But if you fail to write one, the transcript snapshot ensures the user's last question and recent decisions are still recoverable via grep.
-
-**Post-compaction recovery order:**
-1. Does `docs/handoff.md` exist? → read it, resume, delete it. Done.
-2. Does the auto-compaction summary contain the user's last message / question? → proceed normally.
-3. Neither? → grep the most recent `.claude/session-log/compact-*.jsonl` for `"role":"user"` and read the last few entries. Report what you find to the user and ask for confirmation before acting on it.
-4. Nothing recoverable? → tell the user: "Контекст загублено при компакції. Що було останнє — повтори, будь ласка." Do not guess.
+> handoff.md is external memory that survives compaction. The user does NOT need to start a new session.
+> Write it BEFORE context gets critical — not after. If compaction happens before you write it, the context is lost.
 
 ### Limits
 - **Max tasks per session**: 3-5 (not 15-25 — quality over quantity).
@@ -103,18 +111,14 @@ This is purely defensive. The hook **cannot block compaction** (Claude Code runs
 1. If `docs/handoff.md` exists — read it FIRST, resume from there, then delete it
 2. **After compaction only — check for lost user question**: if resuming from auto-compaction summary, verify the summary captures the user's last message. If the last user message was a question or request that is NOT answered in the summary — stop, tell the user: "Твоє останнє запитання не потрапило в summary. Повтори, будь ласка." Do NOT proceed with pending tasks until the user's question is answered.
 3. Read `docs/TASK.md` — identify scope for this session
-4. Read `{{VAULT_PATH}}/hot.md` — recent cross-project fails/patterns/gotchas (~2K tokens, always cheap)
-5. Announce: "Session scope: T-NNN, T-NNN, T-NNN (X tasks)"
-6. Review MCP servers (`/mcp`) — disconnect any not needed for current tasks
-7. Load other docs **on demand** (not all at once — saves ~500+ tokens per turn):
+4. Announce: "Session scope: T-NNN, T-NNN, T-NNN (X tasks)"
+5. Review MCP servers (`/mcp`) — disconnect any not needed for current tasks
+6. Load other docs **on demand** (not all at once — saves ~500+ tokens per turn):
    - `docs/CONVENTIONS.md` — before writing/reviewing code
-   - `docs/KNOWLEDGE.md` — before project-specific architecture decisions (ADRs)
+   - `docs/KNOWLEDGE.md` — before architecture decisions
+   - `docs/FAILS.md` — before debugging or fixing bugs
+   - `docs/PATTERNS.md` — before solving recurring problems
    - `docs/DEPLOY.md` — before any deploy action
-   - **Shared vault grep** (`{{VAULT_PATH}}/`):
-     - Before debugging → `grep -rl "<stack/domain>" {{VAULT_PATH}}/fails/`
-     - Before 3p-API integration → `grep -rl "<service>" {{VAULT_PATH}}/gotchas/`
-     - Before solution design → `grep -rl "<keyword>" {{VAULT_PATH}}/patterns/`
-   - See CLAUDE.md § Shared Knowledge Vault for full protocol.
 
 ### Exit Signals (trigger Session End immediately)
 If the user says any of these — start Handoff Protocol NOW:
@@ -124,11 +128,9 @@ If the user says any of these — start Handoff Protocol NOW:
 
 ### Session-End Learning Review (before writing handoff)
 Before writing handoff.md, review the session for learnings:
-- Any non-obvious fix (reusable across projects)? → Write to vault via `vault-write` skill (`fails/`)
-- Any reusable pattern discovered? → Write to vault via `vault-write` skill (`patterns/`)
-- Any API/service gotcha (wrong assumption about external system)? → Write to vault via `vault-write` skill (`gotchas/`)
-- Any architecture decision tied to **this** project's codebase? → Add to `docs/KNOWLEDGE.md` (local)
-- If a local fix also reveals a cross-project lesson — write both: local KNOWLEDGE.md entry AND a vault entry that references it.
+- Any non-obvious fix? → Add to `docs/FAILS.md`
+- Any reusable pattern discovered? → Add to `docs/PATTERNS.md`
+- Any architecture decision made? → Add to `docs/KNOWLEDGE.md`
 
 ### Session End — Handoff Protocol
 When session is ending (tasks done, context heavy, exit signal, or user says "stop"):
@@ -152,7 +154,7 @@ When session is ending (tasks done, context heavy, exit signal, or user says "st
 
 ## Context That Would Be Lost
 - <non-obvious decision made during session>
-- <gotcha discovered but not yet written to the shared vault>
+- <gotcha discovered but not yet in FAILS.md>
 - <dependency or blocker discovered>
 
 ## User's Last Unanswered Question
@@ -177,9 +179,7 @@ When starting a new session and `docs/handoff.md` exists:
 
 When unsure about implementation, API, library usage, or best practice:
 
-1. **First**: check local `docs/KNOWLEDGE.md` (this project's ADRs) AND the shared vault:
-   - `{{VAULT_PATH}}/hot.md` (recent 20)
-   - grep `{{VAULT_PATH}}/fails/`, `/patterns/`, `/gotchas/` by stack/domain/service
+1. **First**: check `docs/KNOWLEDGE.md`, `docs/PATTERNS.md`, `docs/FAILS.md`
 2. **Second**: use Context7 MCP (`mcp__context7__*`) for technical documentation of libraries and frameworks
 3. **Third**: use Tavily / WebSearch for broader internet search (API changes, known issues, community solutions)
 
@@ -193,7 +193,7 @@ If you've tried to fix something **twice and it still fails** — STOP brute-for
 
 ### After 2 failed attempts:
 1. **Stop and analyze**: write down what you tried and why it failed
-2. **Check the shared vault**: `grep -rli "<keyword>" {{VAULT_PATH}}/fails/ {{VAULT_PATH}}/gotchas/` — has this pattern been seen in another project?
+2. **Check FAILS.md**: has this pattern been seen before?
 3. **Research**: use Context7 / WebSearch to find the actual cause
 4. **Change approach**: try a fundamentally different strategy, not a variation of the same one
 5. **If still stuck after 3rd attempt**: tell the user honestly:
@@ -236,7 +236,7 @@ Make changes. Follow all quality rules.
 # Adapt to your stack:
 
 # Python
-uv run ruff check . && mypy src/ --ignore-missing-imports && uv run bandit -r src/ -q
+uv run ruff check . && mypy src/ --ignore-missing-imports
 
 # TypeScript
 npx tsc --noEmit && npx eslint src/
@@ -280,7 +280,7 @@ Tested by: <command>"
 ---
 
 ## Bug Fix Protocol (mandatory)
-1. Check the shared vault FIRST: grep `{{VAULT_PATH}}/fails/` and `{{VAULT_PATH}}/gotchas/` for similar past failures across all projects
+1. Check `docs/FAILS.md` for similar past failures FIRST
 2. `[BACKUP]` commit (Step 1 above)
 3. Write failing test FIRST — do not touch implementation until test exists
 4. Run test to confirm failure (`red` phase)
@@ -290,7 +290,7 @@ Tested by: <command>"
 8. **Same bug elsewhere?** — search codebase for the same pattern that caused this bug. If found in other files — fix ALL occurrences now, not just the one reported
 9. DA review (Step 4 above)
 10. `[CHANGE]` commit (Step 5 above)
-11. If fix pattern is **reusable across projects** (non-obvious, not stack-trivial): write to vault using the `vault-write` skill — choose type `fail` for bugs, `gotcha` for wrong-assumption/API-quirk discoveries
+11. If fix pattern was non-obvious: add entry to `docs/FAILS.md`
 12. If deploying — follow `docs/DEPLOY.md` and verify services after deploy
 
 ---
@@ -314,66 +314,16 @@ Before any deploy action — **read `docs/DEPLOY.md` first**. All server config 
 - Never store secrets in `docs/` or memory files
 - If `.env.production` doesn't exist — create it from `.env.example` and ask user to fill in values ONCE
 
-### CRITICAL: .env Delivery Rules (learned the hard way — 2026-05-04)
-
-**Rule 1 — NEVER `scp` the whole local `.env` to the server.**
-The local `.env` is for local dev and may have test/dummy values (e.g. `ADMIN_PASSWORD_HASH=$2b$12$dummyhash...`). `scp .env vps3:/opt/.../.env` silently overwrites real production values with local test data.
-
-To update a specific key on the server, use a Python heredoc over SSH — never shell echo/sed:
-```bash
-ssh vps3 python3 << 'PYEOF'
-import re
-path = '/opt/Investments/.env'
-new_val = 'THE_ACTUAL_VALUE_WITH_$_SIGNS'
-with open(path, 'r') as f:
-    content = f.read()
-content = re.sub(r'^KEY_NAME=.*$', 'KEY_NAME=' + new_val, content, flags=re.MULTILINE)
-with open(path, 'w') as f:
-    f.write(content)
-PYEOF
-```
-
-**Rule 2 — Secrets containing `$` MUST be written via Python, never via shell.**
-`echo`, `sed`, and docker-compose `env_file:` ALL expand `$VAR` patterns. Bcrypt hashes (`$2b$12$...`), some API keys, and any value with `$` will be silently corrupted.
-
-- `echo 'KEY=$2b$12$...' >> .env` — safe locally (single quotes), but shell injection risk in other contexts
-- `docker-compose env_file: .env` — **ALWAYS corrupts bcrypt hashes** (expands `$2b`, `$XXXX` as variables)
-- **Safe method**: volume-mount `.env` into container (`- ./.env:/app/.env:ro`) so pydantic-settings reads the raw file directly without docker-compose interpolation
-
-**Rule 3 — docker-compose `env_file:` is banned for apps that use bcrypt or any secret with `$`.**
-Use volume mount instead:
-```yaml
-# WRONG — corrupts $2b$12$... hashes:
-app:
-  env_file: .env
-
-# CORRECT — pydantic-settings reads raw file, no interpolation:
-app:
-  volumes:
-    - ./.env:/app/.env:ro
-```
-
 ---
 
 ## Memory System
-
-### Local (this project)
-- **Architecture decisions (ADRs)**: `docs/KNOWLEDGE.md` — project-specific only. What you chose, why, what you rejected, impact. Read before architecture work.
-- **Active tasks**: `docs/TASK.md`
-- **Deploy config**: `docs/DEPLOY.md` — server access, paths, deploy flow
-- **Code standards**: `docs/CONVENTIONS.md`
-
-### Shared (cross-project, `{{VAULT_PATH}}/`)
-- **Fails**: `fails/` — reproducible bugs + root cause + fix
-- **Patterns**: `patterns/` — reusable working solutions
-- **Gotchas**: `gotchas/` — non-obvious API/service/config truths
-- Write via the `vault-write` skill. Read via lazy 3-tier (hot.md → grep folder → drill into specific file).
-- Vault is its own git repo with its own CRUD policy (see vault CLAUDE.md).
-
-### Rules
-- Never duplicate info already in git history or code comments.
-- Never write to both local and vault the same content — each fact has exactly one SSOT.
-- If you find yourself wanting to write the same fail/pattern/gotcha to a second project's local file — STOP, write it to the vault instead.
+- Architecture decisions: `docs/KNOWLEDGE.md`
+- Active tasks: `docs/TASK.md`
+- Failure patterns: `docs/FAILS.md` — append after every non-obvious fix
+- Established solutions: `docs/PATTERNS.md` — append when a recurring pattern is solved
+- Deploy config: `docs/DEPLOY.md` — server access, paths, deploy flow
+- Never duplicate info already in git history or code comments
+- **Pruning**: when FAILS.md or PATTERNS.md exceeds 30 entries, archive older entries to `docs/archive/FAILS_ARCHIVE.md` or `docs/archive/PATTERNS_ARCHIVE.md` — keep only the 20 most recent/relevant in the active file
 
 ## Task Completion (mandatory)
 When marking any task done:
@@ -398,7 +348,7 @@ If any answer is NO — fix before presenting to user.
 
 **Core rules (always active):**
 - Do NOT write code until **95% confident** in what to build. <70% = Plan Mode + questions first.
-- Write handoff + `/compact` at **>50% context** (hard rule — see § Context Budget). After 3-4 compactions — `/clear` + fresh session.
+- `/compact` at **~60%** context. After 3-4 compactions — `/clear` + fresh session.
 - `/clear` when switching to unrelated task.
 - Limit terminal output: `--oneline -20`, `-q`, `| tail -n 50`. Never unbounded.
 - Read files with `limit` + `offset`. One precise read > three exploratory reads.

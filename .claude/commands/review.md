@@ -69,6 +69,18 @@ If scope is only config/docs/styles — skip this step.
 
 ---
 
+## STEP 4.9 — Diablo (mandatory)
+
+Invoke `/da impl <scope>` (Diablo agent). Adversarial check across all the above findings.
+Focus: hidden assumptions, edge cases the other agents missed, scope creep, test quality.
+
+Diablo verdict goes into the consolidated report:
+- BLOCKED → final verdict in STEP 5 must be REQUEST CHANGES regardless of other agents
+- FIX FIRST → list FATAL items must be addressed before merge
+- PROCEED WITH CAUTION → SUSPICIOUS items documented in PR description
+
+---
+
 ## STEP 5 — Consolidated Report
 
 Merge findings from all three agents into one report:
@@ -95,6 +107,9 @@ Merge findings from all three agents into one report:
 ### Performance (if applicable)
 <performance-analyzer findings — CRITICAL / HIGH / MEDIUM / OK>
 
+### Devil's Advocate
+<Diablo findings — FATAL / SERIOUS / SUSPICIOUS, with VERDICT and Next step>
+
 ### Summary
 - Total findings: <count by severity>
 - Blocks merge: YES / NO
@@ -109,5 +124,5 @@ APPROVED / REQUEST CHANGES / NEEDS DISCUSSION
 ## Rules
 - All three agents must run — never skip security or QA
 - If any CRITICAL finding exists — verdict is REQUEST CHANGES
-- Cross-reference findings with the shared vault: `grep -rl "<keyword>" {{VAULT_PATH}}/fails/` — flag recurrences across projects
-- If a new failure pattern (reusable across projects) is discovered, write to vault via `vault-write` skill
+- Cross-reference findings with `docs/FAILS.md` — flag recurrences
+- If a new failure pattern is discovered, add to `docs/FAILS.md`

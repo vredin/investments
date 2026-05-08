@@ -17,9 +17,15 @@ You are the **Task Orchestrator**. Execute backlog tasks from `docs/TASK.md` one
 ## For each task — execute in EXACT order, never skip steps
 
 ### STEP 1 — Git checkpoint
+Use a tag, NOT a commit with TBD content (TBD-coomits pollute history).
+
 ```bash
-git add <tracked changed files> && git commit -m "[BACKUP] Pre-change: T-NNN | Risks: TBD | Scope: TBD"
+# If there are uncommitted changes — stash first
+git stash push -u -m "pre-T-NNN-checkpoint" 2>/dev/null || true
+git tag "backup/T-NNN-$(date +%s)"
+git stash pop 2>/dev/null || true
 ```
+Tag is recoverable via `git checkout <tag>`. Cleanup of old tags lives in `/self-audit`.
 
 ### STEP 2 — Read the spec
 Read `docs/specs/T-NNN-*.md`. Extract:
@@ -48,16 +54,38 @@ Follow spec's Technical Approach exactly.
 - No `console.log` in production code
 
 ### STEP 6 — Static checks
+Read commands from `docs/STACK.md` (`lint_cmd`, `typecheck_cmd`). Do NOT hardcode `npx`/`uv`.
 ```bash
-# Adapt to your stack:
-cd frontend && npx tsc --noEmit
-cd backend && uv run ruff check .
+$(grep '^lint_cmd:' docs/STACK.md | awk '{$1=""; print substr($0,2)}' | tr -d '"')
+$(grep '^typecheck_cmd:' docs/STACK.md | awk '{$1=""; print substr($0,2)}' | tr -d '"')
 ```
 Fix ALL errors before continuing. Zero tolerance.
 
 ### STEP 7 — Run tests, confirm passing
 Run the exact tests from STEP 4. Must pass.
-- If failing after 3 fix attempts → pause, report blocker to user
+- If failing: enter fix loop. Continue until either tests pass OR changes exceed spec scope. In the second case — pause, report blocker.
+
+### STEP 7.3 — Code Review Gate (NEW in v3)
+
+Invoke `code-reviewer` agent on changed files:
+> "Review the implementation of T-NNN against MUST FIX / SHOULD FIX / CONSIDER. Focus on correctness and maintainability."
+
+Verdicts:
+- `APPROVED` → proceed to 7.5
+- `REQUEST CHANGES` (any MUST FIX) → return to STEP 5, fix, loop back to STEP 6
+- `NEEDS DISCUSSION` → pause, ask user
+
+### STEP 7.4 — Performance Gate (NEW in v3)
+
+If changed files include business logic, DB queries, API routes, or front-end components — invoke `performance-analyzer` agent:
+> "Check changes in T-NNN for N+1 queries, missing indexes, unnecessary re-renders, bundle size impact."
+
+Verdicts:
+- `OPTIMIZED` or `OK` → proceed to 7.5
+- `HIGH` (under load) → add follow-up perf task to backlog, proceed
+- `CRITICAL` (user-visible perf regression) → return to STEP 5
+
+If changes are config/docs/styles only → skip this step.
 
 ### STEP 7.5 — Security Gate
 
@@ -108,24 +136,6 @@ Only after STEP 10 passes:
 1. Update `docs/TASK.md`: move task In Progress → remove (archive)
 2. Append to `docs/archive/TASK_ARCHIVE.md` with commit hash
 3. Close GitHub issue: `gh issue close <number> --comment "Done in <commit>"`
-
-### STEP 11.5 — Vault learning review (mandatory)
-Threshold (prevents junk entries): write a vault entry only if BOTH hold —
-(a) the fix/solution is non-obvious (not findable by reading docs or grepping stdlib), AND
-(b) a second project on a different stack could plausibly hit the same issue.
-Per-session cap: max 3 vault writes.
-
-Ask: did this task surface a reusable cross-project lesson meeting the threshold?
-- Non-obvious fix reusable across projects → invoke `vault-write` skill, type=`fail`
-- Reusable working solution / pattern → invoke `vault-write` skill, type=`pattern`
-- Wrong assumption about 3rd-party API / service → invoke `vault-write` skill, type=`gotcha`
-
-If yes: run the full 8-step `vault-write` protocol (`.claude/skills/vault-write/SKILL.md`) — one CRUD op = one commit in the vault repo. `source-project` must be the current project's folder name.
-
-**Interactive gate handling** (orchestrator runs autonomously; vault-write blocks on `AskUserQuestion` for two gates — dedup >70% overlap, contradiction with another project's entry). On either gate: ABORT the vault-write for this task (do not commit partial), append to the STEP 12 report `vault-escalation-needed: <dedup|contradiction> candidate=<title> existing=<F-NNN>`, and proceed. Never silently pick a branch — that corrupts the authorship wall.
-
-If the lesson is project-specific only (local schema, service names): append to `docs/KNOWLEDGE.md` instead.
-If nothing reusable: note "no vault entry" in the STEP 12 report and continue.
 
 ### STEP 12 — Report
 ```

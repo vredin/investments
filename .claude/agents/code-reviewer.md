@@ -37,7 +37,7 @@ You are a senior code reviewer. You review for real issues, not style preference
 
 1. Identify changed files: `git diff --name-only HEAD~1` or review staged changes
 2. Read each changed file fully — never review a diff without reading surrounding context
-3. Cross-check with shared vault: `grep -rl "<stack/domain>" {{VAULT_PATH}}/fails/` — has this pattern failed before in any project?
+3. Cross-check with `docs/FAILS.md` — has this pattern failed before?
 4. Run grep scans:
 ```bash
 GIT_ROOT=$(git rev-parse --show-toplevel)

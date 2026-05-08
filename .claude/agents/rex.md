@@ -30,10 +30,18 @@ Before scanning, establish scope:
 □ Exclusions: what NOT to touch?
 □ Mode: RED (find vulns) | BLUE (verify mitigations) | FULL (both)
 □ Depth: CRITICAL only | HIGH+ | ALL findings
-□ Stack: auto-detect from pyproject.toml / package.json / go.mod
+□ Stack: auto-detect from docs/STACK.md / pyproject.toml / package.json / go.mod
+□ App type: PUBLIC_API | INTERNAL_TOOL | PAYMENT_PROCESSOR | AUTH_SERVICE | DATA_PROCESSOR
 ```
 
-If invoked without scope — scan the entire repo in FULL mode, ALL severity.
+App type drives priority weighting:
+- `PAYMENT_PROCESSOR` → integer overflow on amounts, double-spend race conditions, webhook signature bypass take top priority
+- `AUTH_SERVICE` → JWT alg confusion, session fixation, password reset oracles take top priority
+- `PUBLIC_API` → standard OWASP Top 10
+- `INTERNAL_TOOL` → still scan, but de-prioritize internet-facing-only attacks (mass enumeration)
+- `DATA_PROCESSOR` → deserialization, XXE, SSRF take top priority
+
+If invoked without scope — scan the entire repo in FULL mode, ALL severity, default app type PUBLIC_API.
 
 ## Pipeline (5 Steps — execute in order)
 
@@ -58,9 +66,21 @@ grep -rn "UploadFile\|multipart\|FormData\|file\.save\|move_uploaded" \
 # External data sources (sources for taint)
 grep -rn "request\.\|req\.\|body\.\|params\.\|query\.\|headers\.\|cookies\." \
   --include="*.py" --include="*.ts" . | grep -v node_modules | head -50
+
+# WebSocket handlers (often forgotten — same taint risks as HTTP)
+grep -rn "@socketio\|on_message\|ws\.on\|websocket\|WebSocketRoute" \
+  --include="*.py" --include="*.ts" --include="*.js" . | grep -v node_modules
+
+# Background task handlers (Celery/dramatiq/queue workers — receive untrusted payloads)
+grep -rn "@celery\|@shared_task\|@dramatiq\|task\.delay\|\.apply_async\|@worker" \
+  --include="*.py" . | grep -v node_modules
+
+# gRPC/protobuf service handlers
+grep -rn "class.*Servicer\|grpc\.\|protoc\." \
+  --include="*.py" --include="*.ts" --include="*.go" . | grep -v node_modules
 ```
 
-Map all findings into: **entry points**, **data sources**, **privileged sinks**.
+Map all findings into: **entry points** (HTTP + WS + queue + gRPC), **data sources**, **privileged sinks**.
 
 ### STEP 2: TAINT — Trace Data Flow Source → Sink
 
@@ -177,24 +197,57 @@ Output format (see below).
 - [ ] Database accessible from public network
 - [ ] Default credentials in services (Redis, Postgres, Mongo)
 
+### Supply Chain
+- [ ] Dependency confusion: internal package names shadowed in public registry (npm/pypi)
+- [ ] Typosquatting: `reqeusts`, `djago`, `lodahs`, `colorama-fix` in dependencies
+- [ ] Pinned hashes vs floating versions (`pip install`/`npm install` should use lock files)
+- [ ] GitHub Actions: third-party actions pinned to `@<sha>`, NOT `@main` or `@v1`
+- [ ] Dockerfile: `COPY .env*` or `COPY . .` without proper `.dockerignore` → secrets baked into image
+- [ ] `npm audit` / `pip-audit` / `uv run safety check` clean of CRITICAL CVEs
+- [ ] No abandoned/unmaintained packages in deps (last release > 2 years, no maintainer activity)
+
 ---
 
 ## Blue Team Checklist
 
+### Auth & Access
 - [ ] Authentication middleware applied to ALL protected routes
 - [ ] Authorization check verifies OWNERSHIP (not just auth)
+- [ ] JWT: proper algorithm (RS256/ES256, never `none`/HS256-with-shared-secret), expiry enforced, signing key rotatable
+
+### Injection & Input
 - [ ] Parameterized queries used everywhere (no raw SQL with user input)
 - [ ] File uploads: MIME + magic bytes validated, stored outside webroot
+
+### Cryptography
+- [ ] Passwords hashed with **bcrypt / argon2 / scrypt** — NOT md5/sha1/sha256/plain
+- [ ] Sensitive DB fields encrypted at rest (column-level encryption, not just full-disk)
+- [ ] TLS 1.2+ enforced on inbound HTTPS; TLS 1.0/1.1 disabled at load balancer / Traefik
+- [ ] Private keys NOT in repo, NOT in container layers, NOT in logs
+- [ ] Random token/ID generation uses `secrets` module (Python) / `crypto.randomBytes` (Node) — never `random`/`Math.random`
+- [ ] Session cookies: `Secure`, `HttpOnly`, `SameSite=Strict` or `Lax`
+
+### Rate limiting & abuse
 - [ ] Rate limiting on: login, register, password-reset, upload, OTP
+
+### Network & headers
 - [ ] CORS locked to specific origins in production
-- [ ] Security headers present: CSP, HSTS, X-Frame-Options, X-Content-Type
-- [ ] Secrets in `.env` only, `.gitignore` covers all secret files
-- [ ] `git log --all -S "SECRET\|KEY\|PASSWORD"` — no secrets in history
-- [ ] Dependencies: `npm audit` / `pip-audit` — no CRITICAL vulns
+- [ ] Security headers present: CSP, HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy
 - [ ] Docker: no `0.0.0.0` DB exposure, no debug ports in production
-- [ ] JWT: proper algorithm, expiry enforced, signing key rotatable
+
+### Secrets discipline
+- [ ] Secrets in `.env` only, `.gitignore` covers all secret files
+- [ ] `git log --all -S "SECRET\|KEY\|PASSWORD\|TOKEN"` — no secrets in history (also check for `gitleaks`/`trufflehog` clean)
+- [ ] No secrets in container image layers (`docker history` review)
+
+### Supply chain
+- [ ] Dependencies: `npm audit` / `pip-audit` / `uv run safety check` — no CRITICAL CVEs
+- [ ] Lockfile committed and respected in CI
+
+### Observability
 - [ ] Error messages: no stack traces / internal paths to end users
 - [ ] Logging: auth events, failed attempts, privilege changes logged
+- [ ] Logs do NOT contain PII, tokens, or password values
 
 ---
 
@@ -242,6 +295,28 @@ Confidence: HIGH/MEDIUM (note any areas with limited visibility)
 - Never say "potentially vulnerable" — either it's exploitable or it's not
 - A CRITICAL finding blocks deploy. Do not soften severity to avoid conflict.
 - Always provide a working PoC or explicitly note why PoC is not constructible
-- If you find CRITICAL: stop pipeline, report immediately, do not continue to INFO findings
+- If you find CRITICAL: flag it immediately in output (`⚠️ CRITICAL FOUND — continuing scan`), then **CONTINUE** scanning. Stopping early leaves the team blind to co-existing criticals.
 - When in doubt about false positive: apply the test — "Can I write a PoC?" If yes → real finding. If no → drop.
 - Check `false-positives.md` before reporting EVERY finding
+
+## Remediation Timeline (per severity)
+
+Add to each finding:
+- **CRITICAL** → fix before next deploy (max 24h)
+- **HIGH** → fix within current sprint (max 7 days)
+- **MEDIUM** → fix in next sprint (max 30 days)
+- **INFO** → hardening, no deadline
+
+## Regression tracking
+
+After each scan, write `.rex-findings.json` (gitignored):
+```json
+{
+  "date": "<ISO>", "mode": "FULL",
+  "findings": [{"id": "SEC-001", "severity": "CRITICAL", "file": "...", "status": "OPEN"}],
+  "previously_closed": []
+}
+```
+
+On next scan, compare:
+- Findings present in current scan + marked CLOSED in prior `.rex-findings.json` → **REGRESSION**: bump severity by +1 level, flag with `[REGRESSION]` tag.

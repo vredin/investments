@@ -5,17 +5,6 @@ description: 'Manage active task list in docs/TASK.md. Usage: /todo [add <text>]
 
 > **Style:** Load `caveman-distillate` skill — terse responses, no filler, fragments OK.
 
-## ⛔ HARD RULE — NO IMPLEMENTATION CODE
-
-**This command is STRICTLY planning only.**
-NEVER write, edit, or run implementation code under this command — not even a one-liner bug fix.
-Even if the fix is obvious and trivial: STOP. Add it as a task. That's it.
-
-Allowed under `/todo`: read code (for research/spec), write spec files, update TASK.md, create GitHub issues.
-Implementation happens ONLY under `/implement` or `/orchestrate`.
-
----
-
 Manage the active task list in `docs/TASK.md`.
 
 Arguments: $ARGUMENTS
@@ -33,36 +22,27 @@ Read `docs/TASK.md` and show a formatted table of In Progress + Backlog tasks.
 
 This is NOT a simple append. Follow ALL steps:
 
-**STEP 1 — ConfidenceChecker**
+**STEP 1 — Grill the user (replaces ConfidenceChecker)**
 
-Assess your understanding:
-- Do you know which files/components are affected?
-- Do you know expected vs current behavior?
-- Do you know the acceptance criteria?
+Load skill: `.claude/skills/grill-me/SKILL.md`.
 
-Score confidence 0–100%.
+Walk the decision tree for the new task. **One question at a time.** Provide a recommended answer with each question. Resolve each branch's dependencies before moving to the next.
 
-**If confidence < 70%**: Use the `AskUserQuestion` tool to ask targeted clarifying
-questions. Do NOT proceed to STEP 2 until the user answers and confidence reaches 70%+.
+If a question can be answered by exploring the codebase — explore first, ask only if the codebase doesn't answer.
 
-Format the AskUserQuestion with only the blocking unknowns:
-- Which file/component/screen is affected?
-- What is the current behavior vs expected?
-- What are the acceptance criteria?
-- Are there dependencies on other tasks or external systems?
+Stop conditions (any one):
+- Shared understanding is reached (no remaining unknowns)
+- User says "enough" or "skip the rest"
+- 5 questions asked without new information surfacing → escalate: "Specs may be premature; consider /general first to investigate."
 
-Do NOT write a spec or backlog entry before the user responds.
-
-**STEP 2 — Challenge the description**
-
-Before researching, question the user's description for hidden assumptions:
-- **What's NOT said?** What edge cases, error states, or dependencies are implied but not mentioned?
-- **Is the scope right?** Is this actually one task or should it be split? Is it too narrow and missing related work?
-- **Who else is affected?** Does this touch shared code, other features, or external APIs?
-- **What could go wrong?** What are the failure modes the user hasn't considered?
-
-If you find gaps — ask the user with `AskUserQuestion` before proceeding.
-Don't accept vague descriptions like "add feature X" — push for specifics.
+What to grill:
+- Which files/components/screens are affected?
+- Current vs expected behavior — quote actual current behavior, not assumed
+- Acceptance criteria — measurable, not "works correctly"
+- Edge cases not mentioned (empty / null / Unicode / huge / concurrent)
+- Failure modes the user hasn't considered
+- Dependencies on other tasks, external systems, or in-flight work
+- Scope: one task vs split? too narrow? too broad?
 
 **STEP 3 — Research the problem**
 
@@ -213,4 +193,5 @@ GitHub: <issue URL or "skipped">
 - `/todo` is STRICTLY planning only — never write implementation code
 - Completed tasks go to `docs/archive/TASK_ARCHIVE.md` — NEVER stay in TASK.md
 - Archive entries MUST include git commit hash
-- ConfidenceChecker is mandatory for `/todo add` — never skip it
+- grill-me is mandatory for `/todo add` — never skip it (replaces v2 ConfidenceChecker)
+- After spec is written and grill-me yields shared understanding, Diablo (`/da spec T-NNN`) is invoked automatically before backlog add

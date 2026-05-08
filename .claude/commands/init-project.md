@@ -52,58 +52,25 @@ If TARGET_PATH was not provided as argument, also ask:
 # Create target directory if needed
 mkdir -p <TARGET_PATH>
 
-# Copy .claude/ directory (agents, commands, rules, skills, settings)
+# Copy core directories
 cp -r <TEMPLATE_PATH>/.claude <TARGET_PATH>/
-
-# Copy docs/ directory (local docs only: CONVENTIONS, KNOWLEDGE, DEPLOY, TASK, specs, archive)
 cp -r <TEMPLATE_PATH>/docs <TARGET_PATH>/
+cp -r <TEMPLATE_PATH>/bin <TARGET_PATH>/
 
-# Copy CLAUDE.md
+# Copy root files
 cp <TEMPLATE_PATH>/CLAUDE.md <TARGET_PATH>/
-
-# Copy .gitignore template
 cp <TEMPLATE_PATH>/.gitignore.template <TARGET_PATH>/.gitignore
+
+# Normalize permissions — critical for shareable template
+chmod -R u=rwX,go=rX <TARGET_PATH>/.claude/
+chmod +x <TARGET_PATH>/bin/*.sh
 ```
 
-Do NOT copy: `CLAUDE_SETUP.md`, `README.md`, `memory/`, `.git/`.
-
-**Note**: The template no longer contains `docs/FAILS.md` or `docs/PATTERNS.md` — those are now stored in the shared vault at `~/PycharmProjects/Obsidian/`. All projects read/write fails, patterns, and gotchas from there via the `vault-write` skill. If a copy of an older template still has these files, delete them from the target project after copying — they are deprecated.
-
-### STEP 2.5 — Resolve vault path (read config, bootstrap if missing)
-
-The template files you just copied reference the shared vault via the `{{VAULT_PATH}}` placeholder. Before continuing, resolve that placeholder to the user's actual vault path.
-
-```bash
-CONFIG_FILE="$HOME/.claude-template-vault-path"
-
-if [ -f "$CONFIG_FILE" ]; then
-  VAULT_PATH="$(cat "$CONFIG_FILE" | tr -d '\n' | tr -d ' ')"
-  if [ -f "$VAULT_PATH/CLAUDE.md" ]; then
-    echo "✅ Vault found at $VAULT_PATH (from $CONFIG_FILE)"
-  else
-    echo "⚠ Config points at $VAULT_PATH but CLAUDE.md is missing there."
-    VAULT_PATH=""
-  fi
-fi
-
-if [ -z "$VAULT_PATH" ]; then
-  echo "⚠ Shared knowledge vault not bootstrapped yet."
-  echo "Bootstrapping it now from vault-skeleton/..."
-fi
-```
-
-**If `$VAULT_PATH` is empty** (no config file, or config points at a broken vault):
-
-1. **Read `.claude/commands/vault-bootstrap.md` and execute its steps inline.** Slash commands cannot programmatically invoke other slash commands — you read the file, then run its bash blocks yourself. That command will prompt the user for the vault location via `AskUserQuestion`, copy `vault-skeleton/` there, substitute `{{VAULT_PATH}}`, initialize git, and write the resolved path to `~/.claude-template-vault-path`.
-2. **After bootstrap completes**, re-read the config file: `VAULT_PATH="$(cat "$CONFIG_FILE")"`.
-
-Without the vault, `vault-write`, `migrate-to-vault`, and every "check the vault first" step in `/fix` and `/review` will fail. Bootstrap is mandatory — do not skip.
-
-If the user refuses the bootstrap: set `VAULT_PATH=""`, fall back to local-only memory (KNOWLEDGE.md, CONVENTIONS.md, TASK.md, DEPLOY.md), tell them they can bootstrap later with `/vault-bootstrap`, and **skip the placeholder substitution in STEP 3.5** (the `{{VAULT_PATH}}` references will remain as literal strings — the user can run `/vault-bootstrap` later and then re-run a sed-replace manually).
+Do NOT copy: `README.md`, `temp/`, `.git/`, `.claude/.setup.json`.
 
 ### STEP 3 — Replace placeholders
 
-Using the info from STEP 1, edit these files:
+Using the info from STEP 1, edit these files (every `[PROJECT_NAME]`/`[e.g. ...]` must become a concrete value):
 
 **`CLAUDE.md`**:
 - Replace `[PROJECT_NAME]` with actual project name
@@ -114,42 +81,23 @@ Using the info from STEP 1, edit these files:
 - Replace stack placeholders with actual stack
 - Update Deploy section with actual deploy flow
 
+**`docs/STACK.md`** (new in v3):
+- Fill stack table from STEP 1 answers
+- Fill `lint_cmd`, `typecheck_cmd`, `test_*` commands per chosen stack
+- Fill `ssh_alias`, `db_container`, `db_user`, `db_name`, `app_service` for prod access
+
+**`docs/CONTEXT.md`** (new in v3):
+- Replace `[PROJECT_NAME]` in header
+- Leave glossary empty — user fills as project grows
+
+**`docs/RUNBOOK.md`** (new in v3):
+- Replace `[alias]`, `[app]`, `[project_path]` with actual values from STEP 1
+
 **`docs/DEPLOY.md`**:
 - Fill in SSH command, project path, domain(s), reverse proxy
 - Fill in deploy flow steps with actual commands
 - Fill in Services table with actual services and URLs
 - Remove placeholder brackets — everything should be concrete values
-
-### STEP 3.5 — Substitute `{{VAULT_PATH}}` in copied template files
-
-The template files reference the shared vault via a `{{VAULT_PATH}}` placeholder so the template stays portable across machines. Materialize it to the actual path you resolved in STEP 2.5:
-
-```bash
-# Re-read config file here — bash variables don't persist between slash-command steps.
-VAULT_PATH="$(cat "$HOME/.claude-template-vault-path" 2>/dev/null | tr -d '\n' | tr -d ' ')"
-
-if [ -n "$VAULT_PATH" ] && [ -f "$VAULT_PATH/CLAUDE.md" ]; then
-  find "<TARGET_PATH>/.claude" "<TARGET_PATH>/docs" -type f \( -name "*.md" -o -name "*.json" \) \
-    -exec sed -i '' "s|{{VAULT_PATH}}|$VAULT_PATH|g" {} \;
-  sed -i '' "s|{{VAULT_PATH}}|$VAULT_PATH|g" "<TARGET_PATH>/CLAUDE.md"
-
-  # Sanity check — no placeholder should remain in the new project
-  REMAINING=$(grep -rln "{{VAULT_PATH}}" "<TARGET_PATH>/.claude" "<TARGET_PATH>/docs" "<TARGET_PATH>/CLAUDE.md" 2>/dev/null || true)
-  if [ -n "$REMAINING" ]; then
-    echo "❌ {{VAULT_PATH}} still present in:"
-    echo "$REMAINING"
-    exit 1
-  fi
-  echo "✅ {{VAULT_PATH}} → $VAULT_PATH substituted in new project."
-else
-  echo "⚠ Skipping placeholder substitution — vault not bootstrapped."
-  echo "  {{VAULT_PATH}} references remain as literal strings in:"
-  echo "  $TARGET_PATH/.claude/ , $TARGET_PATH/docs/ , $TARGET_PATH/CLAUDE.md"
-  echo "  Run /vault-bootstrap later, then re-run this sed block manually."
-fi
-```
-
-> **Why STEP 3.5 exists:** the template stores `{{VAULT_PATH}}` instead of a hardcoded `~/PycharmProjects/Obsidian` so it works for any user regardless of their preferred projects directory. STEP 2.5 resolved the actual path via the config file (or bootstrap); this step writes it into the new project's copy of the template files.
 
 ### STEP 4 — Create .env.example
 
@@ -170,28 +118,58 @@ DATABASE_URL=postgresql://user:password@localhost:5432/dbname
 # Add stack-specific variables below
 ```
 
-### STEP 5 — Initialize git
+### STEP 5 — Initialize git (MANDATORY — must succeed)
 
 ```bash
 cd <TARGET_PATH>
-git init -b main
-# Add only the files this command explicitly created — never use `git add -A`
-# (per workflow.md: `-A` can stage secrets or unrelated files).
-git add .claude/ docs/ CLAUDE.md .env.example .gitignore
-git commit -m "[BACKUP] Initial project setup from claude-project-template"
+git init
+git add -A
+git commit -m "[BACKUP] Initial project setup from claude-project-template v3"
 ```
 
-> **Note**: `git init` is allowed — it creates a fresh repository and is not destructive.
-> The destructive-command hook in `.claude/settings.json` does NOT block `git init`.
+**Hard verification — DO NOT proceed past this step if any check fails:**
+
+```bash
+# Verify git was actually initialized
+cd <TARGET_PATH>
+git rev-parse --git-dir 2>/dev/null || { echo "FATAL: git init failed" >&2; exit 1; }
+
+# Verify there's at least one commit
+git log --oneline -1 2>/dev/null | grep -q . || { echo "FATAL: no initial commit" >&2; exit 1; }
+
+# Verify [BACKUP] marker is in history
+git log --pretty="%s" -1 | grep -q "^\[BACKUP\]" || { echo "FATAL: initial commit missing [BACKUP] marker" >&2; exit 1; }
+```
+
+If any check fails — STOP. Do NOT continue to STEP 5.5 or 6. Report failure to user with exact command output. The PreToolUse Edit hook will refuse all edits without `[BACKUP]` history, so if init failed silently the project is broken in a non-obvious way.
+
+### STEP 5.5 — Create Outline project collection
+
+If MCP outline is connected:
+1. `mcp__outline__create_collection` with name `Project: <project_name>`. Capture returned ID.
+2. Create initial sub-page `Overview` in that collection with project's STACK.md content.
+3. Save collection ID to `<TARGET_PATH>/.claude/.setup.json`:
+   ```json
+   {
+     "version": 3,
+     "project_name": "<name>",
+     "outline_project_collection_id": "<id>",
+     "outline_shared_collection_id": "<from_~/.claude/.setup.json or asked>"
+   }
+   ```
+
+If MCP outline NOT connected:
+- Print instruction: "Run `/setup` first to configure Outline MCP, then `/setup` will create the project collection retroactively."
+- Continue without Outline integration; project still works locally.
 
 ### STEP 6 — Verify and report
 
 Check that all placeholder strings are gone:
 ```bash
-grep -rn "\[PROJECT_NAME\]\|\[e\.g\.\|/PATH/TO/\|{{VAULT_PATH}}" <TARGET_PATH>/.claude/ <TARGET_PATH>/docs/ <TARGET_PATH>/CLAUDE.md 2>/dev/null
+grep -rn "\[PROJECT_NAME\]\|\[e\.g\.\|/PATH/TO/" <TARGET_PATH>/.claude/ <TARGET_PATH>/docs/ <TARGET_PATH>/CLAUDE.md 2>/dev/null
 ```
 
-If any remain — fix them. `{{VAULT_PATH}}` residue specifically means STEP 3.5 didn't run (user refused bootstrap) — re-run `/vault-bootstrap` and the sed block in STEP 3.5, or fix manually.
+If any remain — fix them.
 
 Then report:
 
@@ -202,16 +180,12 @@ Directory: <TARGET_PATH>
 Stack: <backend> + <frontend>
 Deploy: <ssh alias> → <server path>
 
-Files created (local):
+Files created:
 - .claude/ (agents, commands, rules, skills, settings)
-- docs/ (KNOWLEDGE — project ADRs; CONVENTIONS; TASK; DEPLOY)
+- docs/ (KNOWLEDGE, FAILS, PATTERNS, TASK, DEPLOY)
 - CLAUDE.md
 - .env.example
 - .gitignore
-
-Shared knowledge (read/write via vault-write skill):
-- $VAULT_PATH — fails, patterns, gotchas across all projects
-  (deprecated local docs/FAILS.md and docs/PATTERNS.md are NOT created)
 
 Next steps:
 1. Open the project: cd <TARGET_PATH>

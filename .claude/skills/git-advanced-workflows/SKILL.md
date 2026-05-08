@@ -280,9 +280,8 @@ git rebase origin/main
 
 # Handle conflicts
 git status
-# Fix conflicts in files, then stage the resolved files by path
-# (avoid `git add .` / `git add -A` — can stage unrelated changes or secrets)
-git add path/to/resolved-file1 path/to/resolved-file2
+# Fix conflicts in files
+git add .
 git rebase --continue
 
 # Or merge instead

@@ -63,16 +63,11 @@ Present the analysis to the user and ask: "Shall I proceed with fix option [reco
 
 ## STEP 5 — Fix the problem + static checks
 
-Apply the fix. Then run appropriate static checks:
+Apply the fix. Then run static checks per `docs/STACK.md`:
 ```bash
-# TypeScript/React:
-npx tsc --noEmit
-
-# Python:
-uv run ruff check <changed_files>
-
-# Node.js:
-npm run lint
+# Resolve commands from docs/STACK.md (lint_cmd, typecheck_cmd) — do NOT hardcode npx/uv.
+$(grep '^lint_cmd:' docs/STACK.md | awk '{$1=""; print substr($0,2)}' | tr -d '"')
+$(grep '^typecheck_cmd:' docs/STACK.md | awk '{$1=""; print substr($0,2)}' | tr -d '"')
 ```
 Fix any static errors before proceeding.
 
@@ -113,18 +108,43 @@ If matches found **OR** if the bug itself is security-related (auth bypass, data
 Verdicts:
 - **CLEAN** → proceed to STEP 7
 - **New vulnerability introduced** → return to STEP 5, fix the new issue, loop back from STEP 6
-- **Root cause is a security pattern with broader impact** → after STEP 7, use the `vault-write` skill to create a `fail` entry in the shared vault (severity: critical, domain: auth/csrf/injection/etc.) documenting the vulnerability class, root cause, fix pattern, and detection method. Reusable across projects.
+- **Root cause is a security pattern with broader impact** → after STEP 7, add `[SEC-NNN]` entry to `docs/FAILS.md` documenting the vulnerability class, root cause, fix pattern, and detection method
 - **Fix is incomplete** (same vulnerability reachable via different path) → fix all paths before proceeding
 
 If no security-sensitive files changed AND bug is not security-related → skip this step.
 
 ---
 
-## STEP 7 — Update documentation
+## STEP 6.9 — Diablo (mandatory)
+
+Invoke `/da impl <fix_scope>`. Diablo attacks the fix:
+- Is this really the root cause, or just a symptom?
+- Could the fix introduce a new bug?
+- Is the test catching the right thing? (anti-regression check)
+- Are there other call paths that hit the same bug?
+
+Verdicts:
+- BLOCKED → return to STEP 4 (root cause analysis)
+- FIX FIRST → address FATAL findings, loop back from STEP 5
+- PROCEED CAUTION / ACCEPTABLE → continue
+
+---
+
+## STEP 7 — Update documentation + Outline
 
 If applicable:
 - Update README or inline comments if the fix changes expected behavior
-- Note the root cause pattern for future reference
+- If root cause is non-obvious — save as `F-NNN` to Outline `Knowledge Base / Fails`:
+  ```
+  mcp__outline__create_document
+    title: "F-NNN: <slug>"
+    collectionId: <shared_kb>
+    text: |
+      ## Symptom
+      ## Root cause
+      ## Fix pattern
+      ## Detection (how to spot this in other code)
+  ```
 
 ---
 

@@ -26,9 +26,10 @@ allowed-tools: Read, Glob, Grep
 
 | Skill | Use For |
 |-------|---------|
-| `@[skills/database-design]` | Database schema design |
-| `@[skills/api-patterns]` | API design patterns |
-| `@[skills/deployment-procedures]` | Deployment architecture |
+| `improve-codebase-architecture` | Find deepening opportunities, refactor for depth, ADR generation |
+| `api-design` | API contract design (REST/GraphQL) |
+| `deploy-strategies` | Deployment architecture (blue-green, canary, rolling) |
+| `docker-expert` | Containerization architecture |
 
 ---
 

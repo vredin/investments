@@ -336,10 +336,9 @@ Before making any changes:
    git log --oneline -5
    \`\`\`
 
-4. Stage the specific files you changed (never `git add .` / `git add -A` —
-   may stage secrets like `.env.production` or unrelated files):
+4. Stage all changes:
    \`\`\`bash
-   git add path/to/file1 path/to/file2
+   git add .
    \`\`\`
 
 5. Create commit:
@@ -600,9 +599,9 @@ For complex workflows, verify each step:
 ```markdown
 ### 3. Create Commit
 
-1. Stage changes (list specific files — never `git add .`):
+1. Stage changes:
    \`\`\`bash
-   git add path/to/changed-file
+   git add .
    \`\`\`
 
 2. Verify staging:

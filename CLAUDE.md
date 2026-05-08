@@ -94,3 +94,53 @@ See `.claude/rules/` — auto-loaded by Claude Code:
 ## Agents
 - `Diablo` — **mandatory critic**. Runs at: (1) spec planning before backlog, (2) implementation before commit. Verdicts: BLOCKED (stop), FIX FIRST (fix before commit), PROCEED WITH CAUTION, ACCEPTABLE. If BLOCKED — work stops until fixed.
 - `Rex` — **dual Red/Blue team security agent**. RED mode: taint analysis, OWASP Top 10, PoC generation. BLUE mode: mitigation verification. Runs: before every deploy, on auth/payment/upload changes, on-demand audit. CRITICAL finding = deploy blocked. Skill: `.claude/skills/security-scan/`.
+
+## Persistence Discipline (HARD RULE — applies to every response)
+
+> Conversation memory is NOT persistence. /compact and /clear erase it. Only the file system survives.
+
+**Banned phrases without an immediate tool call:**
+- "записал" / "noted" / "I'll remember" / "I have it"
+- "добавил в TODO" / "added to TODO"
+- "зафиксирую" / "I'll record this"
+- "это учтено" / "this is captured"
+
+**Each such claim MUST be paired in the same turn with a tool call that writes to disk:**
+- Task → `/todo add` → produces `docs/specs/T-NNN-*.md`
+- Architectural decision → Edit `docs/KNOWLEDGE.md` or `docs/adr/<NNNN>-*.md`
+- Business rule → `/rule` → produces row in `docs/RULES.md`
+- Failure pattern → Edit `docs/FAILS.md` + (optional) Outline `Knowledge Base / Fails`
+- Reusable solution → Edit `docs/PATTERNS.md` + (optional) Outline `Knowledge Base / Best Practices`
+
+**If you can't pair the claim with a tool call** (e.g. user is brainstorming, not yet ready to commit) — say:
+> "This is NOT persisted. To save: run /todo add for tasks, /rule for business rules, or ask me to Edit docs/KNOWLEDGE.md."
+
+Never let the user believe something is recorded when it isn't.
+
+## Business Logic Discipline (HARD RULE — applies to numerical/policy answers)
+
+> The worst failure mode of LLMs: confidently inventing numbers that look correct.
+
+**Before answering ANY question that involves:**
+- Numerical values: rates, prices, fees, commissions, limits, quotas, percentages, deadlines, durations
+- Calculation formulas
+- Policy decisions: who can do X, when Y is allowed, what happens if Z
+
+**You MUST:**
+1. Read `docs/RULES.md` (auto-loaded at session start, but re-read if uncertain)
+2. grep for the relevant subject
+3. If found → cite the exact `R-NNN` row in your answer (e.g. "Per R-014: senior coach rate is 1500 UAH")
+4. If NOT found → STOP. Output:
+   > **RULE NOT IN docs/RULES.md.**  
+   > I will not invent a value. Please:
+   > - Confirm the rule + source, then I'll add via `/rule`
+   > - OR point me to the document/contract where it's defined
+
+**Banned phrases:**
+- "I think the rate is..."
+- "Based on similar features, it would be..."
+- "Approximately..."
+- "From our earlier conversation..." (conversation = not a source)
+
+This rule applies even when the user seems to expect a number — refusing to invent is the correct answer.
+
