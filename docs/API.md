@@ -31,11 +31,11 @@
 | Method | Path | Auth | Response | Notes |
 |--------|------|------|----------|-------|
 | GET | `/sync/ibkr` | yes | HTML | IBKR import form |
-| POST | `/sync/ibkr` | yes | HTML | Upload IBKR file |
+| POST | `/sync/ibkr` | yes | Redirect | Upload IBKR file → redirects to `/` |
 | GET | `/sync/freedom` | yes | HTML | Freedom import form |
-| POST | `/sync/freedom/portfolio` | yes | HTML | Upload Freedom portfolio |
-| POST | `/sync/freedom/trades` | yes | HTML | Upload Freedom trades |
-| POST | `/sync/prices` | yes | HTML | Trigger price sync |
+| POST | `/sync/freedom/portfolio` | yes | Redirect | Upload Freedom portfolio → redirects to `/sync/freedom` |
+| POST | `/sync/freedom/trades` | yes | Redirect | Upload Freedom trades → redirects to `/sync/freedom` |
+| POST | `/sync/prices` | yes | Redirect | Trigger price sync → redirects to `/` |
 
 ## Recommendations
 

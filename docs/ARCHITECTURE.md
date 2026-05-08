@@ -30,22 +30,22 @@ app/
 │   └── admin.py         # /admin/ingest-course, /admin/ingest-channels
 │
 └── services/            # Business logic — no HTTP context
-    ├── portfolio.py     # Portfolio aggregation
+    ├── portfolio.py     # Portfolio aggregation **[STUB — Phase 03]**
     ├── prices.py        # Price sync via yfinance
     ├── analytics.py     # Quantstats-based analytics
     ├── recommender.py   # Monthly buy recommendation engine
     ├── ticker_analysis.py  # Per-ticker LLM analysis
-    ├── llm.py           # OpenRouter client wrapper
+    ├── llm.py           # OpenRouter client wrapper **[PARTIAL — client wrapper real; buy_rationale/RAG/report_narrative raise NotImplementedError — Phase 02/03]**
     ├── settings_service.py # Config key-value CRUD
-    ├── monitor.py       # Portfolio monitoring
-    ├── backup.py        # DB backup
-    ├── telegram.py      # Telegram notifications
+    ├── monitor.py       # Portfolio monitoring **[STUB — Phase 03]**
+    ├── backup.py        # DB backup **[STUB — Phase 04]**
+    ├── telegram.py      # Telegram notifications **[STUB — Phase 02/03]**
     └── ingestion/
         ├── freedom.py   # Freedom Broker import (Excel → DB)
         ├── ibkr.py      # IBKR import
         ├── broker.py    # Shared broker ingestion logic
-        ├── course.py    # Course content ingestion → pgvector
-        └── channels.py  # Telegram channel signals → pgvector
+        ├── course.py    # Course content ingestion → pgvector **[STUB — Phase 01]**
+        └── channels.py  # Telegram channel signals → pgvector **[STUB — Phase 01]**
 ```
 
 ## Data Model
