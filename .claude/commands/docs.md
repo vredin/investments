@@ -46,13 +46,61 @@ Audit + update documentation from real code. Read-mostly with surgical edits.
 1. Glob the source root (`app/`, `src/`, etc — read from `docs/STACK.md`).
 2. Identify entry points (FastAPI routers, React app root, CLI handlers).
 3. Build module map: top-level packages → public interfaces.
-4. Compare with existing `docs/ARCHITECTURE.md`. If sections drifted (module deleted/renamed/moved) → mark with `[DRIFT]` comment, propose update diff.
-5. Use `improve-codebase-architecture/LANGUAGE.md` glossary. NEVER write "service", "boundary", "API alone".
+4. **Stub detection on services** (parallel to STEP 2 endpoint stubs):
+   - Read each service module's primary functions (skip `__init__`, helpers).
+   - Apply same patterns as STEP 2.3 (NotImplementedError, "not implemented" strings, single-line returns, TODO/Phase comments).
+   - In the module map, annotate stubs:
+     ```
+     ├── recommender.py        # Monthly buy recommendation engine **[STUB — phase 2]**
+     ├── ticker_analysis.py    # Per-ticker LLM analysis **[PARTIAL — handles single ticker, no batch]**
+     ├── llm.py                # OpenRouter client wrapper
+     ```
+5. **Schema completeness** — read all `__tablename__` from models. Cross-check that every table appears in the Data Model section. Flag missing tables (don't silently drop them).
+6. Compare with existing `docs/ARCHITECTURE.md`. If sections drifted (module deleted/renamed/moved, stub→real status changed, table added/removed) → mark with `[DRIFT]` comment, propose update diff.
+7. Use `improve-codebase-architecture/LANGUAGE.md` glossary. NEVER write "service", "boundary", "API alone".
 
 ### STEP 2 — API.md
 1. Find all FastAPI/Express/etc route definitions.
-2. Generate flat table: method | path | handler | auth required | response type.
-3. Compare with existing `docs/API.md`. Mark routes that vanished or changed signature.
+2. **Read each endpoint's function body** — not just signature. Cheap step, prevents the "documented as functional, actually a stub" failure mode.
+3. **Detect stubs** — for each endpoint, check the body against these patterns and tag accordingly:
+
+   **Hard stub indicators** (any one → `**STUB**`):
+   - Body contains `raise NotImplementedError`
+   - Flash/return message matches case-insensitive: `"not implemented"`, `"not yet implemented"`, `"todo"`, `"placeholder"`, `"coming soon"`
+   - Body is `pass` with no logic
+   - Body is single-line redirect with no real work (e.g. `return RedirectResponse(...)` and no DB/service call before it)
+
+   **Soft stub indicators** (combination of 2+ → `**PARTIAL**`):
+   - Body has `TODO` / `FIXME` / `XXX` / `HACK` comment AND function does something but skips a code path
+   - Body has `# Phase N:` style comment indicating planned future work
+   - Body wraps a service call but the service itself is a stub (recursive check, depth=1)
+   - Function body < 5 statements AND uses placeholder data (hardcoded list, mock dict)
+
+   **Real implementation** (none of above): no annotation needed.
+
+   For each endpoint detected as STUB / PARTIAL, capture:
+   - The exact stub marker (which pattern matched + line number)
+   - What the function should do per its name / surrounding comments
+
+4. Generate flat table: `method | path | auth | response | notes`. The `notes` column carries the stub annotation.
+
+   Format:
+   ```markdown
+   | POST | `/admin/ingest-course` | yes | Redirect | **STUB** — flash "not implemented yet"; planned: PDF upload → ingestion/course.py → course_chunks |
+   | POST | `/sync/prices` | yes | Redirect | Triggers price sync via services/prices.py |
+   | GET  | `/admin/migrate` | yes | Redirect | **PARTIAL** — handles "to" arg but ignores "from"; see Phase 2 comment |
+   ```
+
+5. **Auth annotation** — read at TWO levels (don't trust single source):
+   - Router-level: `APIRouter(dependencies=[Depends(login_required)])` or `APIRouter(prefix=..., dependencies=[...])`
+   - Endpoint-level: `@router.get("/foo", dependencies=[...])`
+   - If either has `login_required` → `Auth: yes`
+   - Note any role-level checks (`require_admin`, `require_role("X")`) explicitly: `Auth: yes (admin)` etc.
+   - Default: `Auth: —` (open)
+
+   **Don't infer admin role from URL** (e.g. `/admin/*` doesn't mean admin auth) — must verify explicit code.
+
+6. Compare with existing `docs/API.md`. Mark routes that vanished, changed signature, or **changed stub status** (formerly STUB → real, or vice versa).
 
 ### STEP 3 — CONVENTIONS.md
 1. Detect added/removed dependencies in `pyproject.toml` / `package.json`.
