@@ -60,12 +60,110 @@ If NO frontend files — skip this step.
 
 ---
 
+## STEP 4.6 — E2E Test Gate (if frontend changes)
+
+Detect frontend changes in the scope:
+```bash
+FRONT_CHANGED=$(git diff --name-only $TARGET 2>/dev/null | \
+  grep -E '\.(tsx|jsx|vue|svelte|html|css|scss)$|^app/routes/|^src/routes/|^app/api/|^src/api/' | head)
+```
+
+If frontend changes detected → check Playwright spec is in same diff:
+```bash
+SPEC_ADDED=$(git diff --name-only $TARGET 2>/dev/null | \
+  grep -E 'tests?/e2e/.*\.spec\.(ts|js)$|tests?/e2e/.*\.test\.(ts|js)$')
+```
+
+**Decision:**
+- `FRONT_CHANGED` is non-empty AND `SPEC_ADDED` is empty → **BLOCKED**:
+  ```
+  E2E TEST GATE: BLOCKED
+  
+  Frontend files changed:
+  <list>
+  
+  No Playwright .spec.ts found in same diff.
+  
+  Action:
+    1. Invoke test-writer agent for the changed feature
+    2. Test-writer outputs tests/e2e/<slug>.spec.ts
+    3. Confirm test FAILS without the implementation (red)
+    4. Confirm test PASSES with the implementation (green)
+    5. Add test to commit
+    6. Re-run /review
+  
+  See: .claude/skills/webapp-testing/SKILL.md
+  See: .claude/rules/workflow.md → E2E Test Discipline
+  ```
+- `FRONT_CHANGED` non-empty AND `SPEC_ADDED` non-empty → verify quality:
+  - Read the spec file(s) added
+  - Confirm at least one `expect(...)` assertion exists
+  - Confirm assertions target observable behavior (visible text / URL / element state), NOT trivially-true (`expect(true).toBe(true)`)
+  - Confirm test goes against real app URL, not mocked
+  - Diablo will deeper-attack test quality in STEP 4.9
+- No frontend changes → skip this step
+
+**Edge case — frontend change with explicit "no behavior change":**
+If user states the change is CSS-only with no visual diff (e.g. variable rename, dead code removal), exemption is allowed ONLY IF:
+1. User explicitly states this in the PR description
+2. There's a corresponding `toHaveScreenshot()` test that confirms no visual diff
+3. Diablo agrees the change is genuinely behaviorless (not a hidden behavior change)
+
+Otherwise: BLOCKED.
+
+---
+
 ## STEP 4.7 — Performance Analysis (if significant logic changes)
 
 Check if scope includes business logic, DB queries, API routes, or React components.
 If YES — invoke the `performance-analyzer` agent.
 Focus: N+1 queries, missing indexes, bundle size, unnecessary re-renders, memory leaks.
 If scope is only config/docs/styles — skip this step.
+
+---
+
+## STEP 4.8 — Static Analysis Tier 2 (Python projects only)
+
+Tier 1 (ruff + mypy) runs on every commit via Pre-Change Quality Gate. Tier 2 catches what ruff doesn't: cross-file dead code + duplicate code blocks.
+
+**Detect Python project:**
+```bash
+[ -f pyproject.toml ] && grep -q '\[tool\.ruff\|requires-python' pyproject.toml || [ -f setup.py ] || [ -f requirements.txt ]
+```
+
+If NOT Python — skip this step.
+
+**Run Tier 2:**
+```bash
+# Dead code (cross-file unused functions/classes/imports)
+uv run vulture src/ --min-confidence 80 --exclude tests/
+
+# Duplicate code blocks (only this checker, not full pylint)
+uv run pylint --disable=all --enable=duplicate-code src/
+```
+
+**Install hint** (first-time): `uv add --dev vulture pylint`
+
+**Whitelist** (mandatory for FastAPI / SQLAlchemy / Pydantic / pytest):
+
+Either `.vulture_whitelist.py` in repo root OR `[tool.vulture]` in `pyproject.toml`:
+```toml
+[tool.vulture]
+ignore_names = ["app", "router", "test_*", "fixture_*", "*Base*"]
+ignore_decorators = ["@app.*", "@router.*", "@pytest.*", "@*.event_handler"]
+min_confidence = 80
+exclude = ["tests/", "migrations/", "alembic/"]
+```
+
+Without whitelist: route handlers, ORM models, Pydantic classes show as false-positive "unused".
+
+**Findings interpretation:**
+- vulture finding at confidence 100 → almost always real dead code → MUST FIX
+- vulture finding at confidence 80-99 → triage manually → SHOULD FIX
+- pylint duplicate-code finding → always real (token-based comparison) → SHOULD FIX (extract function)
+
+**If whitelist is missing for FastAPI/SQLAlchemy stack** — STOP, do not run Tier 2. Output:
+> Tier 2 skipped: missing vulture whitelist. Create `.vulture_whitelist.py` or `[tool.vulture]` in pyproject.toml first. See `.claude/rules/references/static-analysis-tier2.md`.
 
 ---
 
@@ -106,6 +204,10 @@ Merge findings from all three agents into one report:
 
 ### Performance (if applicable)
 <performance-analyzer findings — CRITICAL / HIGH / MEDIUM / OK>
+
+### Static Analysis Tier 2 (Python only, if applicable)
+<vulture findings — confidence 100 / 80-99>
+<pylint duplicate-code findings — file:line pairs with similarity score>
 
 ### Devil's Advocate
 <Diablo findings — FATAL / SERIOUS / SUSPICIOUS, with VERDICT and Next step>

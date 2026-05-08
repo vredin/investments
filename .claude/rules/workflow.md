@@ -178,12 +178,14 @@ Required: `[BACKUP]` prefix + what's changing + key risks + affected scope.
 ### Step 2 — Implement
 Make changes per rules.
 
-### Step 3 — Quality Gate (every commit)
+### Step 3 — Quality Gate (every commit, Tier 1)
 Adapt to stack:
 - Python: `uv run ruff check . && mypy src/ --ignore-missing-imports`
 - TS: `npx tsc --noEmit && npx eslint src/`
 - Tests: `pytest tests/ -q` or `npm test`
 - Debug artifacts: `grep -rn "console\.log\|debugger\|TODO\|FIXME\|print(" src/`
+
+Tier 2 (deeper, pre-merge only): vulture + pylint duplicate-code. See `/review` STEP 4.8 + `.claude/rules/references/static-analysis-tier2.md`. Don't run on every commit (false-positive triage cost).
 
 ### Step 4 — DA Review
 Invoke `Diablo` agent. Verdict goes in CHANGE commit message.
