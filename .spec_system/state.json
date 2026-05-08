@@ -3,7 +3,7 @@
   "project_name": "Investment Assistant",
   "description": "Personal investment assistant for retirement savings accumulation. Target: $2000/month pension by age 65 (20-year horizon). Monthly contributions $200-1000. Broker: Interactive Brokers Europe. Two subsystems: (A) monthly buy recommender, (B) portfolio monitoring and rebalancing.",
   "current_phase": 2,
-  "current_session": null,
+  "current_session": "phase02-session01-telegram-llm",
   "monorepo": null,
   "phases": {
     "0": {
@@ -43,6 +43,11 @@
       "date": "2026-05-08",
       "session": "phase01-session01-broker-sync",
       "status": "completed"
+    },
+    {
+      "date": "2026-05-08",
+      "session": "phase02-session01-telegram-llm",
+      "status": "planned"
     }
   ]
 }
