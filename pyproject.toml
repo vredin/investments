@@ -65,3 +65,20 @@ dev = [
     "pytest-playwright>=0.7.2",
     "requests-mock>=1.12.1",
 ]
+
+[tool.vulture]
+min_confidence = 80
+exclude = ["tests/", "migrations/", "alembic/", ".venv/"]
+ignore_names = [
+  "*Create", "*Update", "*Out", "*In", "*Schema", "*Request", "*Response", "*DTO",
+  "*Base*",
+  "test_*", "fixture_*",
+  "Config", "model_config",
+]
+ignore_decorators = [
+  "@app.*",
+  "@router.*",
+  "@pytest.fixture",
+  "@pytest.parametrize",
+  "@event.listens_for",
+]

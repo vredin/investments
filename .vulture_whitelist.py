@@ -1,54 +1,41 @@
-# Vulture whitelist — silences known-good "unused" for FastAPI/SQLAlchemy/Pydantic/pytest stacks
+# Vulture whitelist — ad-hoc symbol names that don't fit pyproject.toml patterns.
 #
-# Usage during /review STEP 4.8:
-#   cp .vulture_whitelist.py.template .vulture_whitelist.py  # one-time, customize per project
-#   uv run vulture src/ .vulture_whitelist.py --min-confidence 80
+# CRITICAL: vulture's `_.X` syntax matches LITERAL symbol names, NOT patterns.
+# `_.BaseModel` says "name BaseModel is referenced" — useful only if your code
+# defines a symbol named exactly "BaseModel". Pydantic SUBCLASSES (UserCreate,
+# PortfolioOut, etc.) are matched via `[tool.vulture] ignore_names = ["*Create",
+# "*Out", ...]` in pyproject.toml — see /review STEP 4.8 bootstrap which injects
+# that block automatically.
 #
-# OR equivalent [tool.vulture] block in pyproject.toml — see
-# .claude/rules/references/static-analysis-tier2.md
-#
-# This file mimics usage patterns so vulture sees these as referenced.
-# Remove sections not relevant to your project.
+# This file is a SUPPLEMENT to pyproject.toml [tool.vulture]:
+# - pyproject.toml = patterns, decorator-based ignores, project-wide config
+# - this file     = literal names that don't fit patterns
 
 # ============================================================
-# FastAPI — route handlers used via decorators
+# FastAPI — instance names
 # ============================================================
 _.app
 _.router
-_.lifespan
-_.startup
-_.shutdown
 
 # ============================================================
-# SQLAlchemy — models used via ORM registry / metadata
+# SQLAlchemy — base class + attributes referenced via metadata
 # ============================================================
 _.Base
 _.metadata
 _.__tablename__
 _.__table_args__
-_.relationship
 
 # ============================================================
-# Pydantic — classes used via FastAPI type hints
+# Common framework lifecycle hooks (FastAPI / Starlette)
 # ============================================================
-_.Config
-_.model_config
-_.BaseModel
+_.lifespan
+_.startup
+_.shutdown
 
 # ============================================================
-# pytest — fixtures and test functions invoked by collector
+# Project-specific — add literal names below as you discover them
 # ============================================================
-_.fixture
-_.parametrize
-_.conftest
-_.pytest_collection_modifyitems
-_.pytest_configure
-
-# ============================================================
-# Project-specific — add your own here
-# ============================================================
-# Example: a CLI command auto-discovered via entry_points
-# _.my_cli_command
-
-# Example: a callback registered via signal/event system
-# _.on_user_created
+# Example for Investments (uncomment if Phase stub params surface):
+# _.html_path
+# _.channel_name
+# _.context_chunks
