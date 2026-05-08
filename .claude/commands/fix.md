@@ -115,6 +115,36 @@ If no security-sensitive files changed AND bug is not security-related → skip 
 
 ---
 
+## STEP 6.5 — E2E Test Gate (if fix touches frontend)
+
+Detect if the fix touched frontend:
+```bash
+FRONT_CHANGED=$(git diff HEAD --name-only | \
+  grep -E '\.(tsx|jsx|vue|svelte|html|css|scss)$|^app/routes/|^src/routes/' | head)
+```
+
+If non-empty:
+- The failing test from STEP 2 should ALREADY be a Playwright `.spec.ts` (per E2E Test Discipline)
+- If STEP 2 wrote a unit test instead — STOP. Return to STEP 2 and rewrite as Playwright e2e:
+  ```
+  E2E TEST GATE: REWRITE STEP 2
+  
+  Fix touches frontend (see files below) but the failing test is a unit test.
+  Per E2E Test Discipline (.claude/rules/workflow.md), frontend bugs require
+  Playwright e2e reproduction.
+  
+  Files: <FRONT_CHANGED>
+  Existing test: <test from STEP 2>
+  
+  Action: rewrite as tests/e2e/<bug-slug>.spec.ts that reproduces the bug
+  via real user interaction. Then continue from STEP 3.
+  ```
+- If STEP 2 already produced a Playwright `.spec.ts` — confirm it asserts observable behavior, then proceed.
+
+If no frontend changes → skip.
+
+---
+
 ## STEP 6.9 — Diablo (mandatory)
 
 Invoke `/da impl <fix_scope>`. Diablo attacks the fix:
@@ -130,21 +160,56 @@ Verdicts:
 
 ---
 
-## STEP 7 — Update documentation + Outline
+## STEP 7 — Update documentation + auto-publish to Outline
 
-If applicable:
+### 7.1 — Local docs
 - Update README or inline comments if the fix changes expected behavior
-- If root cause is non-obvious — save as `F-NNN` to Outline `Knowledge Base / Fails`:
+- Append entry to `docs/FAILS.md` if root cause is non-obvious. Format:
   ```
-  mcp__outline__create_document
-    title: "F-NNN: <slug>"
-    collectionId: <shared_kb>
-    text: |
-      ## Symptom
-      ## Root cause
-      ## Fix pattern
-      ## Detection (how to spot this in other code)
+  ## F-NNN: <slug>
+  
+  **Symptom**: <one-line user-visible behavior>
+  **Root cause**: <technical cause>
+  **Fix pattern**: <what to apply when this recurs>
+  **Detection**: <how to spot in other code: grep pattern, file pattern>
   ```
+
+### 7.2 — Auto-publish to Outline (no prompt)
+
+Read `.claude/.setup.json` → `outline.auto_publish.fails_to_shared`. If `true` (default):
+
+```
+mcp__outline__create_document
+  title: "F-NNN: <slug>"
+  collectionId: <outline.shared_kb_id>
+  parentDocumentId: <Fails sub-page ID, if known>
+  text: |
+    ## Project
+    <project name> (from CLAUDE.md or directory)
+    
+    ## Symptom
+    <copy from FAILS.md>
+    
+    ## Root cause
+    <copy>
+    
+    ## Fix pattern
+    <copy>
+    
+    ## Detection
+    <copy>
+    
+    ## Commit
+    <SHA of the [CHANGE] commit fixing this>
+  publish: true
+```
+
+If MCP outline disconnected or `auto_publish.fails_to_shared = false`:
+- Skip silently — local FAILS.md is source of truth, Outline is replication
+- Log: `[OUTLINE] auto-publish skipped (MCP unavailable or disabled)`
+
+If user wants to suppress for this specific F-NNN — add `[NOPUB]` tag in FAILS.md
+entry; auto-publish detects and skips.
 
 ---
 

@@ -85,11 +85,24 @@ Template:
 ### Local
 Write to `docs/reports/<DATE>.md` (append `-2`, `-3` if multiple reports per day).
 
-### Outline
-1. Search `Knowledge Base / Daily Status` collection for existing doc with title `<PROJECT> — <DATE>`.
-2. If exists → `mcp__outline__update_document` with full new body.
-3. If not → `mcp__outline__create_document` in Daily Status sub-page, title = `<PROJECT> — <DATE>`.
-4. Capture returned doc URL.
+### Outline (auto, no prompt)
+
+Read `.claude/.setup.json` → `outline.auto_publish.daily_status_to_shared`.
+If `false` or MCP outline disconnected → skip Outline write; local report still saved.
+
+If `true` (default):
+1. Read `outline.shared_kb_id` from `.setup.json`. If missing — log skip, continue.
+2. Search `Knowledge Base / Daily Status` for existing doc with title `<PROJECT> — <DATE>`:
+   ```
+   mcp__outline__search_documents
+     query: "<PROJECT> — <DATE>"
+     collectionId: <shared_kb_id>
+   ```
+3. If exists → `mcp__outline__update_document` with full new body.
+4. If not → `mcp__outline__create_document` under Daily Status parent doc.
+5. Capture returned URL.
+
+This goes to **Shared** `Knowledge Base / Daily Status`, NOT project collection — daily status is a single cross-project timeline, not project-specific archive.
 
 ---
 

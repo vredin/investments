@@ -144,3 +144,27 @@ Never let the user believe something is recorded when it isn't.
 
 This rule applies even when the user seems to expect a number — refusing to invent is the correct answer.
 
+## Knowledge Base (Outline)
+
+External KB at `https://outline.semishan.pro` via MCP (configure once via `/setup`).
+
+**Two collections:**
+- `Knowledge Base` (shared, cross-project): Fails, Best Practices, Tricks, Daily Status
+- `Project: <name>` (per-project): Architecture, API Reference, Runbook, Knowledge, Decisions, Rules
+
+**Auto-publish (no prompt):**
+- `/fix` → F-NNN to Shared/Fails
+- `/rule` → R-NNN to Project/Rules
+- `/improve-arch` → ADR to Project/Decisions; reusable patterns to Shared/Best Practices (after explicit flag)
+- `/report` (via /loop daily) → Shared/Daily Status
+- `/docs sync --publish` (via /loop weekly) → Project/{Architecture, API, Runbook, Knowledge, Rules}
+
+**Ask first:**
+- `/general` final save (subjective whether to publish)
+- `/council` verdict to Best Practices
+
+**Control flags** in `.claude/.setup.json` → `outline.auto_publish.*` — flip to `false` per category to disable.
+
+**Full contract**: `docs/OUTLINE-CONTRACT.md` — single source of truth on what publishes where, when.
+
+Search via `mcp__outline__search_documents` (preferred) or `bin/outline.sh search` (fallback).

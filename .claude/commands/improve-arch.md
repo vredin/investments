@@ -61,12 +61,46 @@ After grilling:
 
 ---
 
-## STEP 4 — Cross-link in Outline
+## STEP 4 — Outline integration (auto + ask)
 
-After spec is written:
-1. Search Outline `Knowledge Base / Best Practices` for similar refactor patterns.
-2. If pattern found → link from new spec.
-3. If pattern is novel and proven (after implementation lands) → ask user to publish to Outline.
+### 4.1 — Search for prior art (always)
+Search Outline `Knowledge Base / Best Practices` for similar refactor patterns.
+- If found → link from new spec / refactor doc.
+- If not found → fresh judgment.
+
+### 4.2 — Auto-publish ADR to project collection
+For each ADR-NNN created in this session, read `.claude/.setup.json` →
+`outline.auto_publish.adrs_to_project`. If `true` (default):
+
+```
+mcp__outline__create_document
+  title: "ADR-NNN: <slug>"
+  collectionId: <outline.project_collection_id>
+  parentDocumentId: <Decisions sub-page ID>
+  text: <full ADR markdown>
+  publish: true
+```
+
+### 4.3 — Reusable patterns to shared (ask + flag)
+If a candidate pattern from this refactor seems generalizable beyond this project:
+
+1. Ask user: "Is this pattern likely to apply to ≥2 projects? [yes / no / not sure]"
+2. If `yes` AND `outline.auto_publish.reusable_patterns_to_shared = true` → publish:
+   ```
+   mcp__outline__create_document
+     title: "<pattern name>"
+     collectionId: <outline.shared_kb_id>
+     parentDocumentId: <Best Practices sub-page ID>
+     text: |
+       **Origin**: <project name>, ADR-NNN
+       **Context**: <when this pattern applies>
+       **Pattern**: <description>
+       **Forces**: <what trade-offs it resolves>
+       **Anti-patterns to avoid**: <what NOT to do>
+     publish: true
+   ```
+3. If `not sure` → save with tag `[CANDIDATE]` in title; reviewable later via /self-audit.
+4. If `no` → keep local only in docs/PATTERNS.md.
 
 ---
 

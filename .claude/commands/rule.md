@@ -148,17 +148,36 @@ Diablo verdict: <verdict>"
 
 ---
 
-## STEP 9 — (Optional) Publish to Outline
+## STEP 9 — Auto-publish to Outline (no prompt)
 
-Ask:
-> Publish this rule to Outline `Project: <name> / Rules` for cross-machine access? [y/n]
+Read `.claude/.setup.json` → `outline.auto_publish.rules_to_project`. If `true` (default):
 
-If y:
-1. Read project Outline collection ID from `.claude/.setup.json`
-2. `mcp__outline__create_document` with title `R-NNN: <subject>`, body = full rule details
-3. Add Outline URL to RULES.md row Notes column (or as a small reference)
+1. Read `outline.project_collection_id` from `.setup.json`. If missing → log `[OUTLINE] skipped: no project_collection_id (run /setup → Bootstrap)` and continue.
+2. `mcp__outline__create_document`:
+   ```
+   title: "R-NNN: <subject>"
+   collectionId: <project_collection_id>
+   parentDocumentId: <Rules sub-page ID>
+   text: |
+     **Category**: <category>
+     **Subject**: <subject>
+     **Rule**: <full rule text>
+     **Formula**: <if applicable>
+     **Source**: <source>
+     **Effective**: active
+     **Notes**: <if any>
+     
+     ---
+     Recorded by /rule on <ISO timestamp>. See docs/RULES.md row R-NNN.
+   publish: true
+   ```
+3. Capture returned URL.
 
-NOT shared cross-project — business rules are project-specific. No `Knowledge Base` write.
+NOT published to shared `Knowledge Base` — business rules are project-specific, not reusable.
+
+If MCP disconnected or `auto_publish.rules_to_project = false`:
+- Skip silently — local RULES.md is source of truth.
+- Log: `[OUTLINE] auto-publish skipped`.
 
 ---
 

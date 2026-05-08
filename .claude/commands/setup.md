@@ -48,6 +48,8 @@ Use `AskUserQuestion`:
 | **Fresh install** | First time on this machine; SETUP_DONE=0 |
 | **Reconfigure MCP** | After token rotation; MCP_OK=0 or user says so |
 | **Verify health** | Periodic check; everything should be 1 |
+| **Bootstrap project collection** | MCP connected but project collection missing in Outline |
+| **Register loops** | After Verify health, no /loop schedules detected for this project |
 | **Migrate v2→v3** | Existing project with old template version |
 
 ---
@@ -136,22 +138,126 @@ Use `AskUserQuestion`:
 Run all checks, report status table:
 
 ```
-Component               Status
+Component                   Status
 ──────────────────────────────────────
-.claude/.setup.json     [ok/missing]
-MCP outline             [connected/not]
-docs/STACK.md           [filled/placeholder]
-docs/CONTEXT.md         [present/missing]
-docs/adr/               [present/missing]
-bin/outline.sh          [executable/missing]
-bin/psql_ro.sh          [executable/missing]
-.claude/agents/         [N agents]
-.claude/commands/       [N commands]
-.claude/skills/         [N skills]
-.claude/hooks/          [N hooks]
+.claude/.setup.json         [ok/missing]
+MCP outline                 [connected/not]
+Outline shared_kb_id        [set/missing]
+Outline project collection  [set/missing]
+docs/STACK.md               [filled/placeholder]
+docs/CONTEXT.md             [present/missing]
+docs/adr/                   [present/missing]
+bin/outline.sh              [executable/missing]
+bin/psql_ro.sh              [executable/missing]
+.claude/agents/             [N agents]
+.claude/commands/           [N commands]
+.claude/skills/             [N skills]
+.claude/hooks/              [N hooks]
+/loop schedules registered  [yes/no/unknown]
 ```
 
-For each missing/broken: print fix command (`chmod +x`, `claude mcp add ...`, etc).
+For each missing/broken — print fix command:
+- MCP outline disconnected → `claude mcp add outline --transport http <URL>/mcp ...`
+- Project collection missing → "Run `/setup` → Bootstrap project collection"
+- /loop not registered → "Run `/setup` → Register loops"
+- bin/*.sh not executable → `chmod +x bin/*.sh`
+
+### Bootstrap project collection
+
+Use this mode when MCP outline is connected but the project's Outline collection
+doesn't yet exist (typical for projects migrated to v3 — `/init-project` creates
+collection automatically, migrations don't).
+
+1. Check `.claude/.setup.json` for `outline.project_collection_id`. If present
+   and the collection exists in Outline (verify via `mcp__outline__list_collections`)
+   → already bootstrapped, exit.
+
+2. Read project name (from current directory basename, or `CLAUDE.md` first heading).
+
+3. Read `.claude/.setup.json` for `outline.shared_kb_id`. If missing, ask user
+   for the Knowledge Base collection ID (one-time, since shared across all projects).
+
+4. Create the project collection:
+   ```
+   mcp__outline__create_collection
+     name: "Project: <project_name>"
+     description: "Project-specific knowledge: architecture, ADRs, business rules, API."
+   ```
+   Capture returned `id`.
+
+5. Create initial sub-pages (empty stubs):
+   - "Architecture" — placeholder for docs/ARCHITECTURE.md mirror
+   - "API Reference" — placeholder for docs/API.md mirror
+   - "Runbook" — placeholder for docs/RUNBOOK.md mirror
+   - "Knowledge" — placeholder for docs/KNOWLEDGE.md mirror
+   - "Decisions" — placeholder for ADR-NNN entries
+   - "Rules" — placeholder for R-NNN entries
+
+6. Save IDs to `.claude/.setup.json`:
+   ```json
+   {
+     "outline": {
+       "shared_kb_id": "<id>",
+       "project_collection_id": "<new id>",
+       "auto_publish": {
+         "fails_to_shared": true,
+         "rules_to_project": true,
+         "adrs_to_project": true,
+         "reusable_patterns_to_shared": true,
+         "daily_status_to_shared": true,
+         "docs_sync_to_project": true
+       }
+     }
+   }
+   ```
+   Default all auto_publish flags to `true`. User can flip individual ones off later.
+
+7. Optionally run `/docs publish` immediately to mirror existing local docs into the
+   freshly-created collection.
+
+### Register loops
+
+Use after Verify health to register /loop schedules for the project. /loop is a
+user-environment skill — this command can't register loops directly, but prints
+the four lines for copy-paste.
+
+1. Detect existing schedules. If `/loop list` is available — capture output.
+   Otherwise, ask user "Have you already registered /loop schedules for this project?
+   [yes / no / unknown]".
+
+2. If no schedules registered (or unknown), print:
+
+   ```
+   To register the four default routines for this project, paste these
+   into Claude Code one at a time:
+
+   /loop "0 18 * * *" /report
+   /loop "0 9 * * 1" /docs sync --publish
+   /loop "0 10 * * 5" /self-audit
+   /loop "0 11 1,15 * *" /self-audit --global
+
+   What each does:
+   - /report               daily 18:00 — daily status to Outline
+                           Knowledge Base / Daily Status
+   - /docs sync --publish  weekly Monday — drift detect + publish updated
+                           project docs to Outline Project: <name>
+   - /self-audit           weekly Friday — local process audit
+   - /self-audit --global  bi-weekly 1st & 15th — cross-project pattern
+                           detection via Outline shared collection
+   ```
+
+3. After user pastes them, ask: "Confirmed all 4 registered? [yes / no]"
+
+4. If yes — log to `.claude/.setup.json`:
+   ```json
+   {
+     "loops_registered": {
+       "ts": "<ISO>",
+       "routines": ["/report", "/docs sync --publish", "/self-audit", "/self-audit --global"]
+     }
+   }
+   ```
+   Verify health uses this marker; doesn't repeat the prompt next time.
 
 ### Migrate v2→v3
 

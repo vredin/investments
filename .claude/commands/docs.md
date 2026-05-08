@@ -91,14 +91,40 @@ Trigger: usually after `improve-codebase-architecture` skill grilling produces a
 
 Mirror local `docs/` to Outline `Project: <name>` collection.
 
-1. Read project Outline collection ID from `.claude/.setup.json`.
-2. For each top-level `docs/*.md` (excluding reports/, archive/, specs/):
-   - Search Outline for existing doc with same title.
-   - If exists → `mcp__outline__update_document` with new body.
-   - If not → `mcp__outline__create_document`.
-3. Report mapping local → Outline URL for each.
+1. Read project Outline collection ID from `.claude/.setup.json` (`outline.project_collection_id`).
+   - If missing → "Run `/setup` → Bootstrap project collection first." STOP.
+2. For each of these top-level docs (only published ones):
+   - `docs/ARCHITECTURE.md` → "Architecture" sub-page
+   - `docs/API.md` → "API Reference" sub-page (if exists)
+   - `docs/RUNBOOK.md` → "Runbook" sub-page
+   - `docs/KNOWLEDGE.md` → "Knowledge" sub-page
+   - `docs/RULES.md` → "Rules" sub-page
+   - For each `docs/adr/<NNNN>-*.md` → its own page under "Decisions"
+3. Update logic:
+   - Search Outline for existing doc with matching title or path
+   - If exists → `mcp__outline__update_document` with new body
+   - If not → `mcp__outline__create_document` under appropriate parent
+4. Report mapping local → Outline URL.
 
-`reports/`, `archive/`, `specs/` are NOT mirrored (too noisy, project-internal).
+NOT mirrored (transient or project-internal):
+- `docs/STACK.md`, `docs/CONTEXT.md`, `docs/CONVENTIONS.md` (machine-readable config, not narrative knowledge)
+- `docs/TASK.md`, `docs/specs/`, `docs/reports/`, `docs/handoff/`, `docs/archive/`
+- `docs/FAILS.md` (those flow to **Shared/Fails** via `/fix` auto-publish, not via `/docs publish`)
+- `docs/PATTERNS.md` (publishes to **Shared/Best Practices** only when explicitly flagged via `/improve-arch`)
+
+## Mode: `sync --publish` (chained: sync first, then publish)
+
+For use via `/loop` (weekly Monday):
+
+1. Run `sync` mode — audit drift, apply fixes
+2. If sync produced changes → run `publish` mode automatically
+3. If sync found no drift → skip publish (Outline is up-to-date)
+4. If sync found drift but apply was rejected — DON'T publish stale local; report and exit
+
+Loop registration: `/loop "0 9 * * 1" /docs sync --publish`
+
+This is the gated auto-publish for project docs — only republishes when local files
+actually changed AND sync confirmed they reflect reality.
 
 ---
 
