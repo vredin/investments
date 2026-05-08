@@ -1,24 +1,25 @@
-# [PROJECT_NAME] — Claude Instructions
+# Investment Assistant — Claude Instructions
 
 ## Language
-Respond in: **[Ukrainian / English / ...]**
+Respond in: **Russian** (user writes in Russian/Ukrainian)
 
 ## Session Memory (LAZY LOAD — don't read everything at once)
 
-> **At session start — ALWAYS read these (mandatory):**
+> **At session start** — read ONLY what's needed now (saves tokens every turn):
 > 1. `docs/handoff.md` — if exists, read FIRST, resume from there, then delete it
 > 2. `docs/TASK.md` — identify scope for this session
-> 3. **`docs/RULES.md`** — business rules. ALWAYS auto-loaded. Required to refuse hallucination on rate/policy questions. Keep it small (<200 lines); archive old rows as needed.
+> 3. `{{VAULT_PATH}}/hot.md` — last 20 cross-project fails/patterns/gotchas (~2K tokens, always cheap)
 > 4. Review MCP servers (`/mcp`) — disconnect any not needed for current tasks
 >
 > **Load on demand** (when relevant to current task):
 > - `docs/CONVENTIONS.md` — before writing or reviewing code
-> - `docs/KNOWLEDGE.md` — before architecture decisions
-> - `docs/CONTEXT.md` — before refactoring or design discussions (domain glossary)
-> - `docs/FAILS.md` — before debugging or fixing bugs
-> - `docs/PATTERNS.md` — before solving recurring problems
+> - `docs/KNOWLEDGE.md` — before architecture decisions (project-specific ADRs only)
 > - `docs/DEPLOY.md` — before any deploy action
-> - `docs/RUNBOOK.md` — when prod misbehaves
+> - **Shared vault** (`{{VAULT_PATH}}/`) — grep-filter on demand:
+>   - Before debugging: `grep -rl "<stack/domain>" {{VAULT_PATH}}/fails/`
+>   - Before 3rd-party API integration: `grep -rl "<service>" {{VAULT_PATH}}/gotchas/`
+>   - Before designing a solution: `grep -rl "<pattern keyword>" {{VAULT_PATH}}/patterns/`
+>   - Never read the entire vault. Drill into specific `F-NNN`/`P-NNN`/`G-NNN` files only after filtering.
 
 ## Response Style
 
@@ -28,11 +29,92 @@ Respond in: **[Ukrainian / English / ...]**
 ## Token Economy
 
 > - Do NOT write code until **95% confident** in what to build. Ask questions first.
-> - `/compact` at **~60%** context — don't wait for auto-compact at 95%.
+> - **Context hard rule**: check `/context` every 20 tool calls. At **>50%** — STOP, write `docs/handoff.md`, `/compact`. Never wait for auto-compact at 95%. PreCompact hook snapshots transcript as fallback only (see `.claude/rules/workflow.md` § Context Budget).
 > - `/clear` when switching to an unrelated task.
 > - Limit terminal output: `--oneline -20`, `-q`, `| tail -n 50`.
 > - Read files with `limit` + `offset` — never read 2000 lines for a 20-line function.
 > - Subagents cost 7-10x — scale review depth to change size (see `skill-routing.md`).
+
+## SSOT — Single Source of Truth (each fact lives in ONE place)
+
+| Info Type | SSOT Location | Do NOT write to |
+|-----------|---------------|-----------------|
+| Code standards | `docs/CONVENTIONS.md` (local) | Code comments, KNOWLEDGE.md |
+| Architecture decisions (this project) | `docs/KNOWLEDGE.md` (local) | Code comments, TASK.md |
+| **Cross-project fails** | `{{VAULT_PATH}}/fails/` (shared vault) | Local files, KNOWLEDGE.md |
+| **Cross-project patterns** | `{{VAULT_PATH}}/patterns/` (shared vault) | Local files, KNOWLEDGE.md |
+| **Cross-project gotchas** (API/service surprises) | `{{VAULT_PATH}}/gotchas/` (shared vault) | Local files, code comments |
+| Active tasks | `docs/TASK.md` (local) | handoff.md (handoff is one-time) |
+| Deploy config | `docs/DEPLOY.md` (local) | KNOWLEDGE.md, .env files |
+| Server/infra secrets | `.env.production` (local, gitignored) | docs/, code, logs |
+
+> If you're about to write info that belongs in another file — stop and write it there instead.
+> If the info is **reusable across projects**, it belongs in the shared vault (see Shared Knowledge Vault section below), NOT in any local file.
+
+## Shared Knowledge Vault (cross-project KB)
+
+**Location**: `{{VAULT_PATH}}/`
+**What lives there**: fails (reproducible bugs + fix), patterns (reusable working solutions), gotchas (non-obvious API/service truths — e.g. "Meta test phone numbers silently drop real broadcasts").
+**What stays local**: `docs/KNOWLEDGE.md` (this project's architectural decisions), `docs/TASK.md`, `docs/DEPLOY.md`, `docs/CONVENTIONS.md`.
+
+### Reading from vault (lazy 3-tier)
+1. **Always**: `{{VAULT_PATH}}/hot.md` — last 20 entries, ~2K tokens
+2. **On demand**: grep-filter by stack/domain into `fails/`, `patterns/`, `gotchas/`
+3. **Drill**: read a specific `F-NNN` / `P-NNN` / `G-NNN` file only after narrowing via 1-2
+
+### Writing to vault
+Use the **`vault-write`** skill. Full protocol lives in `.claude/skills/vault-write/SKILL.md`. Key rules:
+- Dedup check before CREATE (grep the relevant folder first)
+- `source-project` frontmatter field is mandatory — this is the authorship wall
+- **Never** edit the body of another project's note — only append `## Contradictions` / `## Related` sections
+- **Never** delete vault files — use `status: obsolete` / `superseded` flags
+- One CRUD op = one git commit in the vault repo
+- Contradictions always escalate to user via `AskUserQuestion` — never silently resolve
+
+Vault has its own `CLAUDE.md` at the vault root — Claude reads it automatically when working with files there.
+
+## Rules
+See `.claude/rules/` — auto-loaded by Claude Code:
+- `project.md` — stack, code standards, deploy
+- `workflow.md` — pre-change protocol, bug fix protocol, deploy protocol
+- `skill-routing.md` — which skill/agent to load per task type
+
+## Key Commands
+
+**Daily (memorize these 4):**
+- `/todo add <description>` — spec-first task planning (grill-me + Diablo before backlog)
+- `/orchestrate` — autonomous backlog execution (test-writer + code-reviewer + perf + Rex + Diablo gates)
+- `/general <question>` — verified Q&A, evidence-first, no speculation
+- `/rule <statement>` — capture business rule into docs/RULES.md (rates/fees/policies)
+
+**Setup & init:**
+- `/setup` — wizard: fresh install (asks language), MCP reconfigure, verify health, Bootstrap project collection, Register loops, Setup launchd schedules, Migrate v2→v3
+- `/init-project [path]` — scaffold new project from template (interactive)
+- `/911` — cheatsheet of all template commands
+
+**Planning & decomposition:**
+- `/intent <vague-idea>` — greenfield: idea → research → PRD with Diablo gate. Output: docs/prd/PRD-NNN.md
+- `/decompose <PRD-NNN | reqs-doc>` — PRD → Architecture (ADRs) → Epics → Tasks via 4 Diablo gates
+- `/quick-plan <description>` — lightweight implementation plan to specs/
+
+**On-demand:**
+- `/fix <bug>` — disciplined bug fix: failing-test-first + Outline check + Diablo + auto-publish F-NNN
+- `/review [scope]` — full pre-merge: code-reviewer + Rex + qa-expert + perf + design + Diablo
+- `/da [spec|plan|impl|review] [target]` — explicit Diablo invocation
+- `/improve-arch [path]` — refactor for depth (Ousterhout-style + ADR generation)
+- `/council <question>` — Opus + Sonnet parallel deliberation
+- `/gaps [missing|modern|both]` — service-level audit
+- `/test [backend|frontend|e2e|all]` — run test suites
+
+**Auto via /loop:**
+- `/report` — daily 23:00, daily status to Outline
+- `/docs sync --publish` — Mon 09:00, mirror docs to Outline
+- `/self-audit` — Fri 10:00, process improvement audit
+- `/self-audit --global` — 1st & 15th, cross-project audit
+
+## Agents
+- `Diablo` — **mandatory critic**. Runs at: (1) spec planning before backlog, (2) implementation before commit. Verdicts: BLOCKED (stop), FIX FIRST (fix before commit), PROCEED WITH CAUTION, ACCEPTABLE. If BLOCKED — work stops until fixed.
+- `Rex` — **dual Red/Blue team security agent**. RED mode: taint analysis, OWASP Top 10, PoC generation. BLUE mode: mitigation verification. Runs: before every deploy, on auth/payment/upload changes, on-demand audit. CRITICAL finding = deploy blocked. Skill: `.claude/skills/security-scan/`.
 
 ## Persistence Discipline (HARD RULE — applies to every response)
 
@@ -55,23 +137,6 @@ Respond in: **[Ukrainian / English / ...]**
 > "This is NOT persisted. To save: run /todo add for tasks, /rule for business rules, or ask me to Edit docs/KNOWLEDGE.md."
 
 Never let the user believe something is recorded when it isn't.
-
-## E2E Test Discipline (HARD RULE — applies to frontend changes)
-
-Frontend changes without a Playwright `.spec.ts` are NOT done. Period.
-
-Browser-MCP tools (`mcp__claude-in-chrome__*` and similar) are for **debugging** only — never as a substitute for writing a test.
-
-**Forbidden mental patterns:**
-- "Проверю в браузере" → write `tests/e2e/<feature>.spec.ts`
-- "Кликну через chrome-MCP" → write the spec
-- "Это маленькое изменение, тест избыточен" → small changes hide regressions; write the spec
-
-The Playwright spec goes in the SAME commit as the implementation. The PreToolUse hook + `/review` STEP 4.6 + `/fix` STEP 6.5 enforce this — a frontend `[CHANGE]` without `tests/e2e/*.spec.ts` in the diff is BLOCKED.
-
-See `.claude/rules/workflow.md` and `.claude/skills/webapp-testing/SKILL.md` for full rule and the narrow chrome-MCP allowed list.
-
----
 
 ## Business Logic Discipline (HARD RULE — applies to numerical/policy answers)
 
@@ -100,87 +165,3 @@ See `.claude/rules/workflow.md` and `.claude/skills/webapp-testing/SKILL.md` for
 
 This rule applies even when the user seems to expect a number — refusing to invent is the correct answer.
 
-## SSOT — Single Source of Truth (each fact lives in ONE file)
-
-| Info Type | SSOT File | Do NOT write to |
-|-----------|-----------|-----------------|
-| Code standards | `docs/CONVENTIONS.md` | Code comments, KNOWLEDGE.md |
-| Architecture decisions | `docs/KNOWLEDGE.md` | Code comments, TASK.md |
-| Failure patterns | `docs/FAILS.md` | KNOWLEDGE.md, code comments |
-| Reusable solutions | `docs/PATTERNS.md` | FAILS.md, KNOWLEDGE.md |
-| Active tasks | `docs/TASK.md` | handoff.md (handoff is one-time) |
-| **Business rules / rates / formulas** | **`docs/RULES.md`** | **conversation memory, KNOWLEDGE.md** |
-| Deploy config | `docs/DEPLOY.md` | KNOWLEDGE.md, .env files |
-| Server/infra secrets | `.env.production` (local, gitignored) | docs/, code, logs |
-
-> If you're about to write info that belongs in another file — stop and write it there instead.
-
-## Rules
-See `.claude/rules/` — auto-loaded by Claude Code:
-- `project.md` — stack, code standards, deploy
-- `workflow.md` — pre-change protocol, bug fix protocol, deploy protocol
-- `skill-routing.md` — which skill/agent to load per task type
-
-## Key Commands
-
-**Daily (memorize these 4):**
-- `/todo` — spec-first task planning (uses grill-me skill, then Diablo via /da)
-- `/orchestrate` — autonomous backlog execution (calls test-writer, code-reviewer, perf-analyzer, Rex, Diablo)
-- `/general <question>` — verified answer with mandatory evidence-first, no speculation
-- `/rule <statement>` — capture business rule into docs/RULES.md (rates, fees, formulas, policies). Use INSTEAD of conversation memory.
-
-**Setup & init:**
-- `/setup` — wizard: fresh install (asks language), MCP reconfigure, verify health, v2→v3 migrate, Bootstrap project collection, Register loops, Setup launchd schedules
-- `/init-project [path]` — scaffold a new project from this template (interactive)
-- `/911` — cheatsheet of all template commands grouped by use case (when you forget what's available)
-
-**On-demand (rare):**
-- `/intent <vague-idea>` — greenfield: idea → PRD via research + Diablo + verification. Output: docs/prd/PRD-NNN.md
-- `/decompose <PRD-NNN | requirements-doc>` — PRD → Architecture (ADRs) → Epics → Tasks. 4 Diablo gates. Output: docs/adr/, docs/epics/, docs/specs/T-NNN.
-- `/council <question>` — Opus + Sonnet parallel deliberation (no external API)
-- `/fix <bug>` — disciplined bug fix with failing test first + Diablo
-- `/review [scope]` — full review pipeline: code-reviewer + Rex + qa-expert + perf + Diablo
-- `/gaps [missing|modern|both|<path>]` — service-level audit: what's missing in the service vs production-grade SaaS, what's outdated vs 2025-26 modern practices
-- `/da [spec|plan|impl|review] [target]` — explicit Diablo invocation
-- `/improve-arch [path]` — refactor for depth (Ousterhout-style, with ADR generation)
-
-**Auto via /loop (you don't invoke manually):**
-- `/report` — daily progress to Outline `Knowledge Base / Daily Status` (set `/loop "0 18 * * *" /report`)
-- `/docs sync` / `/docs audit` — weekly drift detection (`/loop "0 9 * * 1" /docs audit`)
-- `/self-audit` — weekly process improvement (`/loop "0 10 * * 5" /self-audit`)
-- `/self-audit --global` — bi-weekly cross-project pattern detection
-
-**Inside-other-commands (don't invoke directly):**
-- `/test`, `/quick-plan`
-
-## Knowledge Base (Outline)
-
-External KB at `https://outline.semishan.pro` via MCP (configure once via `/setup`).
-
-**Two collections:**
-- `Knowledge Base` (shared, cross-project): Fails, Best Practices, Tricks, Daily Status
-- `Project: <name>` (per-project): Architecture, API Reference, Runbook, Knowledge, Decisions, Rules
-
-**Auto-publish (no prompt):**
-- `/fix` → F-NNN to Shared/Fails
-- `/rule` → R-NNN to Project/Rules
-- `/improve-arch` → ADR to Project/Decisions; reusable patterns to Shared/Best Practices (after explicit flag)
-- `/report` (via /loop daily) → Shared/Daily Status
-- `/docs sync --publish` (via /loop weekly) → Project/{Architecture, API, Runbook, Knowledge, Rules}
-
-**Ask first:**
-- `/general` final save (subjective whether to publish)
-- `/council` verdict to Best Practices
-
-**Control flags** in `.claude/.setup.json` → `outline.auto_publish.*` — flip to `false` per category to disable.
-
-**Full contract**: `docs/OUTLINE-CONTRACT.md` — single source of truth on what publishes where, when.
-
-Search via `mcp__outline__search_documents` (preferred) or `bin/outline.sh search` (fallback).
-
-## Agents
-
-- `Diablo` — **mandatory critic**. Runs from `/da`, auto-invoked in `/todo`, `/fix`, `/review`, `/orchestrate`. Verdicts: BLOCKED / FIX FIRST / PROCEED CAUTION / ACCEPTABLE; each carries a Next step.
-- `Rex` — **dual Red/Blue team security agent**. RED: taint analysis, OWASP Top 10, supply-chain checks, PoC generation. BLUE: crypto + auth + secrets verification. Runs: before deploy, on auth/payment/upload changes, on-demand audit.
-- `code-reviewer`, `qa-expert`, `design-reviewer`, `performance-analyzer` — invoked from `/review` and `/orchestrate` STEPs 7.3/7.4.
-- `test-writer`, `orchestrator` — internal pipeline agents.
