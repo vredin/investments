@@ -50,4 +50,8 @@ echo "[$(date)] Running '$PROMPT' for $(basename "$PROJECT_DIR")"
 echo "[$(date)] Runner: ${RUNNER[*]}"
 echo "===================================="
 
-exec "${RUNNER[@]}" -p "$PROMPT"
+# --dangerously-skip-permissions: required for headless scheduled runs.
+# Safe here because prompt is fixed (controlled by plist), not external input.
+# Without it: tools (Edit/Write/Bash/MCP) get blocked → /report can't write
+# docs/reports/, /self-audit can't save audit file, /docs sync can't publish.
+exec "${RUNNER[@]}" -p "$PROMPT" --dangerously-skip-permissions

@@ -42,4 +42,4 @@ echo "[$(date)] Running daily /report for $(basename "$PROJECT_DIR")"
 echo "[$(date)] Runner: ${RUNNER[*]}"
 echo "===================================="
 
-exec "${RUNNER[@]}" -p "/report"
+exec "${RUNNER[@]}" -p "/report" --dangerously-skip-permissions
