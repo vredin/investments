@@ -59,6 +59,24 @@ Project: <name>                             ← per-project, not reusable
 
 Flip a flag to `false` to disable that auto-publish. Defaults are all `true`.
 
+## Read flow — commands check Outline BEFORE work
+
+Auto-publish is one direction. The other direction (read prior knowledge before starting) is equally important — without it, every new task risks duplicating or contradicting prior work.
+
+| Command | Reads from | When |
+|---|---|---|
+| `/fix` STEP 0.5 | `Knowledge Base / Fails` (matching F-NNN), `Knowledge Base / Best Practices` (defensive patterns) | Before diagnosing — recurring bugs surfaced |
+| `/todo add` STEP 2.5 | `Knowledge Base / Best Practices`, `Knowledge Base / Fails`, `Project: <name> / Decisions` (ADRs), `Project: <name> / Rules` | Before researching — task constraints surfaced |
+| `orchestrator` STEP 2.5 | `Knowledge Base / Fails` (newer than spec), `Project: <name> / Decisions`, `Knowledge Base / Daily Status` (recent adjacent work) | After reading spec, before writing tests — refresh context |
+| `/general` (per bucket) | `Knowledge Base / Fails`, `Knowledge Base / Best Practices`, `Project: <name> / *` | Always when relevant to the question type |
+
+**Decision shape** (same for all read points):
+- Match found, applicable → reuse the prior pattern, link from new artifact
+- Match found, contradicts → flag, ask user to reconcile (often means ADR override)
+- Nothing relevant → proceed, document the search in artifact
+
+This is the feedback loop: writes from one task become reads for the next.
+
 ## Why this design
 
 - **Objective → AUTO**. Failures, rules, ADRs are facts; asking permission per-publish is friction without value.

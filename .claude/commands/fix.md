@@ -23,6 +23,42 @@ If arguments are plain text — use them directly as the bug description.
 
 ---
 
+## STEP 0.5 — Search prior knowledge BEFORE diagnosing (mandatory)
+
+Before formulating any hypothesis about root cause, search known failures. The same bug, or its class, may already be documented.
+
+### Local first
+```bash
+grep -nE "<keyword from $ARGUMENTS>" docs/FAILS.md docs/PATTERNS.md 2>/dev/null
+```
+
+### Outline shared KB
+If MCP outline is connected and `outline.shared_kb_id` is set in `.claude/.setup.json`:
+```
+mcp__outline__search_documents
+  query: "<extract 3-5 keywords from $ARGUMENTS>"
+  collectionId: <shared_kb_id>
+  limit: 5
+```
+
+Search BOTH `Knowledge Base / Fails` (for matching F-NNN entries) AND `Knowledge Base / Best Practices` (defensive patterns that may apply).
+
+### Decision
+
+**If a matching F-NNN exists** (high confidence — same symptom + same area):
+- Read it fully
+- Show user: "Found similar prior fix: F-NNN — <title>. Fix pattern: <one line>. Apply same approach? [yes / no — different bug] [n]"
+- If `yes` → skip to STEP 5 (apply known fix), keep STEP 2 (write test that documents this re-occurrence) shorter
+- If `no` → continue full /fix flow but note the precedent in commit message
+
+**If only adjacent/loose matches**: list them, continue to STEP 1.
+
+**If nothing relevant**: continue to STEP 1.
+
+This step costs 2-3 seconds + 1 MCP call. Saves 30-60 minutes of re-debugging in the recurring-bug case.
+
+---
+
 ## STEP 1 — Git backup
 
 Run `git add <tracked changed files> && git commit -m "[BACKUP] Pre-fix: $ARGUMENTS | Risks: unknown until root cause | Scope: TBD"`. Never use `git add -A` — it can stage secrets.

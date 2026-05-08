@@ -44,6 +44,56 @@ What to grill:
 - Dependencies on other tasks, external systems, or in-flight work
 - Scope: one task vs split? too narrow? too broad?
 
+**STEP 2.5 — Search prior knowledge BEFORE researching (mandatory)**
+
+Before reading code or external docs, check what's already known. Many tasks
+duplicate or contradict prior decisions; surfacing them now is cheaper than
+discovering during implementation.
+
+### Local first
+```bash
+grep -lE "<task keywords>" docs/KNOWLEDGE.md docs/PATTERNS.md docs/RULES.md 2>/dev/null
+```
+
+### Outline shared `Knowledge Base`
+If MCP outline connected:
+```
+mcp__outline__search_documents
+  query: "<3-5 keywords from task>"
+  collectionId: <shared_kb_id>
+  limit: 5
+```
+Looking for: prior `Best Practices` (validated patterns) + similar `Fails` (gotchas to avoid).
+
+### Outline `Project: <name>` — decisions and rules
+```
+mcp__outline__search_documents
+  query: "<task keywords>"
+  collectionId: <project_collection_id>
+  limit: 5
+```
+Looking for: existing ADRs that constrain implementation, business rules
+(R-NNN) that must be respected, prior architecture for this area.
+
+### Decision
+
+**If 1+ ADRs found**: include in spec section 3 (Prerequisites) — "Constrained by ADR-NNN: <decision>". Don't relitigate accepted decisions.
+
+**If 1+ Best Practices found**: include in spec section 5 (Technical Approach) — "Following pattern: <name>; URL: <Outline URL>". Reuse known-good designs.
+
+**If similar Fails found**: include in spec section 8 (BQC Risks) — "Avoid F-NNN: <pattern>". Specific failure modes to design around.
+
+**If 1+ R-NNN business rules found**: include in spec section 8 — "Must respect R-NNN: <rule>". Don't accidentally violate.
+
+**If contradicting prior decision**: flag, ask user explicitly:
+> "This task seems to contradict ADR-NNN: <decision>. Are you intentionally overturning it (will require new ADR) or did you not know about it?"
+
+**If nothing found**: proceed to STEP 3 with confidence this is fresh ground.
+
+This costs 1-2 MCP calls (~3 seconds). Saves the "we already decided this" / "this contradicts production assumption" surprise during implementation.
+
+---
+
 **STEP 3 — Research the problem**
 
 Read the relevant code. Understand what exists, what's broken, what constraints apply.

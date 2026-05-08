@@ -35,6 +35,44 @@ Read `docs/specs/T-NNN-*.md`. Extract:
 - BQC risks and mitigations
 - **Section 9 — Testing Strategy** (copy every scenario verbatim)
 
+### STEP 2.5 — Search Outline for prior context (mandatory before implementation)
+
+Before writing tests or code, surface prior knowledge from Outline that may
+affect this task. Even if `/todo add` did this at spec-time, the spec may be
+old (created weeks ago); refresh.
+
+If MCP outline connected:
+1. Search `Knowledge Base / Fails` for keywords from spec sections 1 (Overview) and 5 (Technical Approach):
+   ```
+   mcp__outline__search_documents
+     query: "<keywords>"
+     collectionId: <shared_kb_id>
+   ```
+   New F-NNN entries may have been added since spec was written.
+
+2. Search `Project: <name> / Decisions` for ADRs touching this area:
+   ```
+   mcp__outline__search_documents
+     query: "<area keywords>"
+     collectionId: <project_collection_id>
+   ```
+
+3. Search `Knowledge Base / Daily Status` for closed work in similar area in last 14 days:
+   ```
+   mcp__outline__search_documents
+     query: "<area keywords>"
+     collectionId: <shared_kb_id>
+     dateFilter: last 14 days
+   ```
+   May find adjacent recently-completed work that informs this task.
+
+**Decisions:**
+- New F-NNN found that wasn't in spec → pause: "Found newer F-NNN: <title>. Update spec section 8 to mitigate before continuing? [y/n]"
+- Contradicting ADR found → STOP. Spec must be revised or ADR overturned. Don't proceed silently.
+- Nothing new → log "Outline check clean" in commit message later.
+
+If MCP outline disconnected → log skip, continue. Spec is authoritative if Outline unavailable.
+
 ### STEP 3 — Move to In Progress
 Update `docs/TASK.md`: move task row Backlog → In Progress.
 
@@ -43,8 +81,16 @@ Update `docs/TASK.md`: move task row Backlog → In Progress.
 - The spec file path
 - Section 9 scenarios from STEP 2
 - Relevant component/route file paths
+- Whether the task touches user-facing UI (auth/forms/navigation/pages/dashboard) — derived from spec's affected files
 
-**Gate**: Do NOT proceed to STEP 5 until test-writer confirms all tests fail.
+**E2E enforcement**: if the task touches user-facing UI, test-writer MUST produce
+`tests/e2e/<slug>.spec.ts` using Playwright. Unit tests with mocked DOM are NOT
+acceptable substitutes. Browser-MCP "verification" is NOT acceptable. See
+`.claude/rules/workflow.md` → E2E Test Discipline.
+
+**Gate**: Do NOT proceed to STEP 5 until:
+- test-writer confirms all tests fail (red phase confirmed)
+- For frontend tasks: at least one `tests/e2e/*.spec.ts` exists in the new test set
 
 ### STEP 5 — Implement
 Follow spec's Technical Approach exactly.
