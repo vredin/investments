@@ -201,18 +201,9 @@ def upsert_snapshot(db: Session, month: str, data: dict) -> ProgressSnapshot:
 def llm_report_narrative(month: str, data: dict) -> str:
     """Generate LLM monthly narrative via OpenRouter. Falls back to empty string on error."""
     try:
-        from openai import OpenAI
+        from app.services.llm import _client
 
-        from app.config import get_settings
-
-        settings = get_settings()
-        if not settings.OPENROUTER_API_KEY:
-            raise ValueError("OPENROUTER_API_KEY not set")
-        client = OpenAI(
-            api_key=settings.OPENROUTER_API_KEY,
-            base_url="https://openrouter.ai/api/v1",
-            timeout=30,
-        )
+        client = _client()
         signals_str = ", ".join(data["rebalance_signals"]) or "none"
         prompt = (
             f"You are a personal finance advisor. Write a concise 3-sentence portfolio "

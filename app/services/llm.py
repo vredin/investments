@@ -18,10 +18,15 @@ MODEL_FAST = "google/gemini-flash-1.5"
 MODEL_REPORT = "anthropic/claude-sonnet-4-5"
 
 
-def _client() -> OpenAI:
+def _client(timeout: int = 30) -> OpenAI:
+    """Return configured OpenRouter client. Usable by sibling services."""
+    settings = get_settings()
+    if not settings.OPENROUTER_API_KEY:
+        raise ValueError("OPENROUTER_API_KEY not set")
     return OpenAI(
         base_url="https://openrouter.ai/api/v1",
-        api_key=get_settings().OPENROUTER_API_KEY,
+        api_key=settings.OPENROUTER_API_KEY,
+        timeout=timeout,
     )
 
 

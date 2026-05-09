@@ -71,18 +71,9 @@ def _oversold_score(db: Session, ticker: str) -> float:
 def _llm_rationale(ticker: str, target_pct: float, current_pct: float) -> str:
     """One-sentence rationale via OpenRouter. Falls back to static string on any error."""
     try:
-        from openai import OpenAI
+        from app.services.llm import _client
 
-        from app.config import get_settings
-
-        settings = get_settings()
-        if not settings.OPENROUTER_API_KEY:
-            raise ValueError("OPENROUTER_API_KEY not set")
-        client = OpenAI(
-            api_key=settings.OPENROUTER_API_KEY,
-            base_url="https://openrouter.ai/api/v1",
-            timeout=30,
-        )
+        client = _client()
         prompt = (
             f"Ты портфельный советник. Напиши ОДНО краткое предложение (макс. 25 слов) на русском языке, "
             f"объясняющее почему стоит купить {ticker} в этом месяце. "
