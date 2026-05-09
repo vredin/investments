@@ -49,8 +49,8 @@ Use `AskUserQuestion`:
 | **Reconfigure MCP** | After token rotation; MCP_OK=0 or user says so |
 | **Verify health** | Periodic check; everything should be 1 |
 | **Bootstrap project collection** | MCP connected but project collection missing in Outline |
-| **Register loops** | After Verify health, no /loop schedules detected for this project |
-| **Setup launchd schedules** | macOS, want any subset of default schedules (/report, /docs sync, /self-audit, /self-audit --global) without cloud schedule. See docs/SCHEDULING.md. |
+| **Setup launchd schedules** | macOS, want any subset of default schedules (/report, /docs sync, /self-audit, /self-audit --global). **PRIMARY scheduler** — works when Claude session is closed. |
+| **Register loops** | DEPRECATED for daily/weekly cadence. `/loop` only fires while Claude session is open. Use **Setup launchd schedules** for persistent schedules. /loop OK only for short intra-session intervals (e.g., babysit-prs every 5 min during active work). |
 | **Migrate v2→v3** | Existing project with old template version |
 
 ---
@@ -113,16 +113,12 @@ This is the default. Per-session override available via prompt («ответь �
    - Capture the collection IDs (user will run a one-liner via MCP and paste IDs)
    - Save IDs to `.claude/.setup.json`
 
-5. **Register /loop schedules** (optional but recommended):
-   - Read `.claude/loop-schedules.md` for the four default routines.
-   - Tell user: "To register the four default routines (daily report, weekly docs audit, weekly self-audit, bi-weekly global audit), run these in your terminal:"
-     ```
-     /loop "0 18 * * *" /report
-     /loop "0 9 * * 1" /docs audit
-     /loop "0 10 * * 5" /self-audit
-     /loop "0 11 1,15 * *" /self-audit --global
-     ```
-   - This is optional — commands work manually too. Skip if `/loop` skill unavailable.
+5. **Register persistent schedules** (recommended):
+   - Use mode **Setup launchd schedules** (macOS) — see section below.
+   - This creates launchd plists in `~/Library/LaunchAgents/` that fire even when Claude session is closed.
+   - Do NOT use `/loop` for daily/weekly cadence — `/loop` only fires while a Claude session is open.
+   - For Linux: systemd timers (manual setup, see `docs/SCHEDULING.md`). For Windows: Task Scheduler.
+   - Skip this step now if you want to set up scheduling later — commands work manually too.
 
 6. **Write .setup.json**:
    ```json
@@ -177,13 +173,13 @@ bin/psql_ro.sh              [executable/missing]
 .claude/commands/           [N commands]
 .claude/skills/             [N skills]
 .claude/hooks/              [N hooks]
-/loop schedules registered  [yes/no/unknown]
+launchd schedules registered  [N plists found / 0 / not macOS]
 ```
 
 For each missing/broken — print fix command:
 - MCP outline disconnected → `claude mcp add outline --transport http <URL>/mcp ...`
 - Project collection missing → "Run `/setup` → Bootstrap project collection"
-- /loop not registered → "Run `/setup` → Register loops"
+- launchd schedules absent (macOS) → "Run `/setup` → Setup launchd schedules"
 - bin/*.sh not executable → `chmod +x bin/*.sh`
 
 ### Bootstrap project collection
@@ -241,49 +237,21 @@ collection automatically, migrations don't).
 7. Optionally run `/docs publish` immediately to mirror existing local docs into the
    freshly-created collection.
 
-### Register loops
+### Register loops (DEPRECATED for daily/weekly cadence)
 
-Use after Verify health to register /loop schedules for the project. /loop is a
-user-environment skill — this command can't register loops directly, but prints
-the four lines for copy-paste.
-
-1. Detect existing schedules. If `/loop list` is available — capture output.
-   Otherwise, ask user "Have you already registered /loop schedules for this project?
-   [yes / no / unknown]".
-
-2. If no schedules registered (or unknown), print:
-
-   ```
-   To register the four default routines for this project, paste these
-   into Claude Code one at a time:
-
-   /loop "0 18 * * *" /report
-   /loop "0 9 * * 1" /docs sync --publish
-   /loop "0 10 * * 5" /self-audit
-   /loop "0 11 1,15 * *" /self-audit --global
-
-   What each does:
-   - /report               daily 18:00 — daily status to Outline
-                           Knowledge Base / Daily Status
-   - /docs sync --publish  weekly Monday — drift detect + publish updated
-                           project docs to Outline Project: <name>
-   - /self-audit           weekly Friday — local process audit
-   - /self-audit --global  bi-weekly 1st & 15th — cross-project pattern
-                           detection via Outline shared collection
-   ```
-
-3. After user pastes them, ask: "Confirmed all 4 registered? [yes / no]"
-
-4. If yes — log to `.claude/.setup.json`:
-   ```json
-   {
-     "loops_registered": {
-       "ts": "<ISO>",
-       "routines": ["/report", "/docs sync --publish", "/self-audit", "/self-audit --global"]
-     }
-   }
-   ```
-   Verify health uses this marker; doesn't repeat the prompt next time.
+> **Use mode `Setup launchd schedules` instead.** `/loop` only fires while a Claude session is open — useless for daily/weekly schedules. The previous version of this section recommended `/loop` for `/report`, `/docs sync`, `/self-audit`, `/self-audit --global` — that was wrong.
+>
+> When `/loop` IS appropriate: short intra-session intervals during active work (e.g., `/loop 5m /babysit-prs` while you wait on CI, then `/exit`).
+>
+> **Tell user:**
+> ```
+> /loop is a session-bound feature. It stops the moment you /exit Claude Code.
+> For daily/weekly schedules (which the project actually wants) — use launchd.
+>
+> Run /setup again, choose mode 'Setup launchd schedules'.
+> ```
+>
+> Then immediately offer to switch to `Setup launchd schedules` mode.
 
 ### Setup launchd schedules
 
