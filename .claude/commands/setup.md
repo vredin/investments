@@ -285,9 +285,20 @@ Use this mode when MCP outline is connected but the project's Outline collection
 doesn't yet exist (typical for projects migrated to v3 — `/init-project` creates
 collection automatically, migrations don't).
 
+> **CRITICAL — MCP tools are deferred in Claude Code.** Before calling ANY `mcp__outline__*` tool, you MUST first load its schema via `ToolSearch`. Otherwise calls return `InputValidationError: deferred tool`. This applies to ALL MCP tools — outline, context7, etc. The naming `mcp__<server>__<tool>` is the deferred-tool form.
+>
+> **First step always:**
+> ```
+> ToolSearch select:mcp__outline__list_collections,mcp__outline__create_collection,mcp__outline__create_document,mcp__outline__update_document,mcp__outline__search_documents
+> ```
+>
+> **Do NOT** interpret `InputValidationError: deferred tool` as «MCP server not registered, restart needed». The server IS registered (verify via `claude mcp list`); the tool just isn't loaded into the active context yet. ToolSearch loads it.
+>
+> **Do NOT** fall back to `bin/outline.sh` until you've tried ToolSearch loading first. The shell fallback requires `OUTLINE_TOKEN` env var which user typically hasn't exported.
+
 1. Check `.claude/.setup.json` for `outline.project_collection_id`. If present
-   and the collection exists in Outline (verify via `mcp__outline__list_collections`)
-   → already bootstrapped, exit.
+   and the collection exists in Outline (verify via `mcp__outline__list_collections`
+   — load via ToolSearch first per warning above) → already bootstrapped, exit.
 
 2. Read project name (from current directory basename, or `CLAUDE.md` first heading).
 
