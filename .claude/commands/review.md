@@ -207,7 +207,7 @@ fi
 # Copy whitelist file for literal-name suppressions
 if [ ! -f .vulture_whitelist.py ]; then
   echo "Tier 2 first-run: creating .vulture_whitelist.py from template"
-  cp templates/.vulture_whitelist.py.template .vulture_whitelist.py
+  cp templates/vulture_whitelist.py.template .vulture_whitelist.py
 fi
 ```
 
