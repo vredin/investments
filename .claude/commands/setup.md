@@ -39,6 +39,43 @@ Template setup state:
 
 ---
 
+## STEP 1.5 — Legacy key migration (silent, idempotent)
+
+Before any mode runs, normalize `.claude/.setup.json` so downstream commands find canonical key names. Hand-scaffolded files and older bootstrap scripts may have written legacy variants.
+
+```python
+import json, os
+path = '.claude/.setup.json'
+if not os.path.exists(path):
+    pass  # no setup file yet, skip
+else:
+    with open(path) as f:
+        d = json.load(f)
+    o = d.get('outline', {})
+    renamed = []
+    # Rename FROM (legacy)        TO (canonical)
+    legacy_map = {
+        'shared_kb_collection_id': 'shared_kb_id',
+    }
+    for legacy, canonical in legacy_map.items():
+        if legacy in o and canonical not in o:
+            o[canonical] = o.pop(legacy)
+            renamed.append(f'{legacy} -> {canonical}')
+    if renamed:
+        with open(path, 'w') as f:
+            json.dump(d, f, indent=2)
+            f.write('\n')
+        print('[MIGRATED] outline keys:', ', '.join(renamed))
+```
+
+If renames happened — print one-line notice to user. If none — silent.
+
+This protects against:
+- Hand-scaffolded `.setup.json` with wrong key names (introduced 2026-05-09 during v2→v3 migration of SLUGGER_CRM)
+- Future legacy keys (extend `legacy_map` as needed)
+
+---
+
 ## STEP 2 — Pick mode (interactive)
 
 Use `AskUserQuestion`:
@@ -186,6 +223,8 @@ For each missing/broken — print fix command:
 ### Auto-offer to fix detected issues (mandatory after report)
 
 After printing the status table, if ANY actionable issue is detected, **immediately** call `AskUserQuestion` to offer fixing now without re-running /setup. Don't ask "do you want to fix?" — ask "which fix?":
+
+(Legacy key migration runs automatically in STEP 1.5 before this step — no need to repeat here.)
 
 Build the options list dynamically from detected issues:
 
