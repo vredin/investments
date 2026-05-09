@@ -49,9 +49,10 @@ Use `AskUserQuestion`:
 | **Reconfigure MCP** | After token rotation; MCP_OK=0 or user says so |
 | **Verify health** | Periodic check; everything should be 1 |
 | **Bootstrap project collection** | MCP connected but project collection missing in Outline |
-| **Setup launchd schedules** | macOS, want any subset of default schedules (/report, /docs sync, /self-audit, /self-audit --global). **PRIMARY scheduler** — works when Claude session is closed. |
-| **Register loops** | DEPRECATED for daily/weekly cadence. `/loop` only fires while Claude session is open. Use **Setup launchd schedules** for persistent schedules. /loop OK only for short intra-session intervals (e.g., babysit-prs every 5 min during active work). |
+| **Setup launchd schedules** | macOS, want any subset of default schedules (/report, /docs sync, /self-audit, /self-audit --global). PRIMARY scheduler — works when Claude session is closed. Linux: see `docs/SCHEDULING.md` (systemd timers). |
 | **Migrate v2→v3** | Existing project with old template version |
+
+> **Note:** "Register loops" mode was REMOVED in v3.x. `/loop` is session-bound (stops when you `/exit`) and useless for daily/weekly cadence. If user explicitly asks for `/loop` setup — clarify it's for short intra-session work only (e.g., `/loop 5m /babysit-prs`), then route to Setup launchd schedules for persistent schedules.
 
 ---
 
@@ -237,21 +238,9 @@ collection automatically, migrations don't).
 7. Optionally run `/docs publish` immediately to mirror existing local docs into the
    freshly-created collection.
 
-### Register loops (DEPRECATED for daily/weekly cadence)
+<!-- "Register loops" mode was removed in v3.x. /loop is session-bound. For daily/weekly cadence use Setup launchd schedules section below. -->
 
-> **Use mode `Setup launchd schedules` instead.** `/loop` only fires while a Claude session is open — useless for daily/weekly schedules. The previous version of this section recommended `/loop` for `/report`, `/docs sync`, `/self-audit`, `/self-audit --global` — that was wrong.
->
-> When `/loop` IS appropriate: short intra-session intervals during active work (e.g., `/loop 5m /babysit-prs` while you wait on CI, then `/exit`).
->
-> **Tell user:**
-> ```
-> /loop is a session-bound feature. It stops the moment you /exit Claude Code.
-> For daily/weekly schedules (which the project actually wants) — use launchd.
->
-> Run /setup again, choose mode 'Setup launchd schedules'.
-> ```
->
-> Then immediately offer to switch to `Setup launchd schedules` mode.
+
 
 ### Setup launchd schedules
 
