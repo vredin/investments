@@ -1,0 +1,130 @@
+---
+name: 911-full
+description: 'FULL cheatsheet — every template command grouped by use case. ~14K tokens. Use only when /911 (mini) wasnt enough. Default to /911 first.'
+allowed-tools: Read
+model: sonnet
+---
+
+**INSTRUCTIONS:**
+
+1. **Read the project's language setting** — check `CLAUDE.md` `## Language` section. Common values: `English`, `Russian`, `Ukrainian`, `Bulgarian`.
+
+2. **Print the cheatsheet below** to the user. Do NOT summarize. Do NOT ask "What's next?". Do NOT write anything before or after the cheatsheet.
+
+3. **If language is NOT English** — translate the prose to that language while printing:
+   - **Translate**: table descriptions, "when to use" hints, decision-tree text, hard-rules text, section header subtitles
+   - **DO NOT translate**: command names (`/todo`, `/fix`, etc.), file paths (`docs/RULES.md`), tool names (Diablo, Rex, code-reviewer), code blocks, frontmatter, technical abbreviations (TDD, ADR, PRD, MCP, AC, BQC), Outline collection names (`Knowledge Base / Fails`)
+   - **Keep table structure intact** — row count and columns unchanged
+
+4. The user typed `/911` because they forgot what commands exist. They want to SEE the cheatsheet, not be told it's ready.
+
+5. If language setting is unclear or missing → default to English.
+
+---
+
+# 911 — Template command cheatsheet
+
+> If you forgot what `/<thing>` does — run `/911`. If you forgot whether a command exists — run `/911`. Default destination when stuck.
+
+---
+
+## 🟢 Daily (memorize these 4)
+
+| Command | One-liner | When to use |
+|---|---|---|
+| `/todo add <description>` | Spec-first task planning with grill-me + Diablo | New task surfaced; need executable T-NNN with risk matrix and AC. Skip if /decompose just generated tasks. |
+| `/orchestrate` | Autonomous backlog execution; reads TASK.md, runs full pipeline per task (test-writer → static → tests → code-reviewer → perf → security → Diablo → commit) | Want to pick up the next backlog task and ship end-to-end without micro-managing |
+| `/general <question>` | Verified Q&A with mandatory evidence-first; no speculation | Anything informational: «why does X happen?», «how does Y work?», «what's in production now?» |
+| `/rule <statement>` | Capture business rule (rate / fee / formula / policy) into docs/RULES.md | When a new business rule comes up — INSTEAD of remembering it. Auto-publishes to Outline `Project: <name> / Rules` |
+
+## 🟡 Setup & init (rare, mostly one-time)
+
+| Command | One-liner | When to use |
+|---|---|---|
+| `/setup` | Wizard for: Fresh install / Reconfigure MCP / Verify health / Bootstrap project collection / Register loops / Setup launchd schedules / Migrate v2→v3 | First time on a machine; after token rotation; after migration; periodic health check |
+| `/init-project [path]` | Scaffold new project from template (interactive) | Only when starting a new project. Once per project. |
+| `/911` | This cheatsheet | Right now |
+
+## 🔵 Planning & decomposition (greenfield or new feature)
+
+| Command | One-liner | When to use |
+|---|---|---|
+| `/intent <vague-idea>` | Idea → research → 2-3 solution variants → PRD with 4-stage Diablo gate | Greenfield: «хочу систему X для Y». You have NO requirements yet — need to research and propose. |
+| `/decompose <PRD-NNN \| reqs-doc>` | PRD → Architecture (ADRs) → Epics → Tasks via 4 Diablo gates | After PRD is finalized OR you have external requirements doc. Splits down to T-NNN backlog ready for /orchestrate. |
+| `/quick-plan <description>` | Lightweight implementation plan saved to specs/ | Quick informal plan; not for production specs. Use /todo add or /intent for real work. |
+
+## 🔴 On-demand (rare, but important when needed)
+
+| Command | One-liner | When to use |
+|---|---|---|
+| `/fix <bug-description \| #issue>` | Disciplined bug fix: failing-test-first + Outline check + Diablo + auto-publish F-NNN | Real bug. NOT for typos — for those just edit. |
+| `/review [scope]` | Full pre-merge pipeline: code-reviewer + Rex + qa-expert + perf + design + Diablo | Before merging changes. If unsure, use /review. |
+| `/da [spec\|plan\|impl\|review] [target]` | Explicit Diablo invocation | Hand-pick: attack a spec/plan/impl when you don't trust auto-flows |
+| `/improve-arch [path]` | Refactor for depth (Ousterhout-style) — ADR generation, module deepening | When code feels shallow / hard-to-test / needs restructure. NOT for routine bugfix. |
+| `/council <question>` | Opus + Sonnet parallel deliberation; surfaces disagreement | Architecture forks, build-vs-buy, security-critical decisions where one model's bias matters |
+| `/gaps [missing\|modern\|both\|<path>]` | Service-level audit: what's missing vs SaaS checklist; what's outdated vs 2025-26 idioms | Periodic checkup; before major release; onboarding to existing project |
+| `/test [backend\|frontend\|e2e\|all]` | Run test suites (auto-detects stack from STACK.md) | Direct test runner. Used internally by /fix and /orchestrate. |
+
+## 🟣 Auto via /loop (you don't invoke directly)
+
+| Command | Cadence | What |
+|---|---|---|
+| `/report [today\|yesterday]` | Daily 23:00 (via launchd) | Daily status: what was done, in progress, blocked. Publishes to Outline `Knowledge Base / Daily Status`. |
+| `/docs sync --publish` | Mon 09:00 weekly (via launchd) | Audit + sync ARCHITECTURE/API/Runbook from real code, publish to Outline `Project: <name>` |
+| `/self-audit` | Fri 10:00 weekly (via launchd) | Local process improvement audit; finds workflow violations, suggests diff-ready fixes |
+| `/self-audit --global` | 1st & 15th 11:00 bi-weekly (via launchd) | Cross-project process audit via Outline aggregation |
+
+## 🟤 Internal (called by other commands; don't invoke directly)
+
+| Command | Called by |
+|---|---|
+| `/todo done <id>` | After T-NNN completion |
+| `/todo start <id>` | When picking up a backlog task |
+| `/todo list` | When checking backlog |
+
+---
+
+## Knowledge Base sources (Outline)
+
+| Looking for... | Search in... |
+|---|---|
+| Past failures across projects | `Knowledge Base / Fails` (auto-populated by /fix) |
+| Validated patterns | `Knowledge Base / Best Practices` (auto + ask-mode) |
+| Daily status timeline | `Knowledge Base / Daily Status` (auto via /report) |
+| One-liners and tricks | `Knowledge Base / Tricks` (manual) |
+| This project's architecture | `Project: <name> / Architecture` (auto via /docs sync) |
+| This project's PRDs | `Project: <name> / PRDs` (auto via /intent) |
+| This project's ADRs | `Project: <name> / Decisions` (auto via /decompose, /improve-arch) |
+| This project's Epics | `Project: <name> / Epics` (auto via /decompose) |
+| This project's business rules | `Project: <name> / Rules` (auto via /rule) |
+
+Search via `mcp__outline__search_documents` (preferred) or `bin/outline.sh search` (fallback). Commands `/general`, `/fix`, `/todo`, `/orchestrate` already do read-before-start automatically.
+
+---
+
+## When stuck — decision tree
+
+```
+Want to know something      → /general
+Found a bug                  → /fix
+Have a vague new idea        → /intent → /decompose
+Have requirements already    → /decompose
+Have one specific task       → /todo add → /orchestrate
+Want to ship something       → /orchestrate
+Code feels wrong             → /improve-arch
+Need a sanity check          → /gaps both
+Architectural decision stuck → /council
+Forgot what's where          → /911 (you're here)
+```
+
+---
+
+## Hard rules to remember (live in workflow.md)
+
+1. **Persistence**: «записал/added to TODO» BANNED without tool call. Claim = action.
+2. **Business logic**: numerical answers MUST cite R-NNN from `docs/RULES.md` or refuse.
+3. **TDD**: every code change has a failing test first. Static analysis after green.
+4. **E2E for frontend**: Playwright `.spec.ts` mandatory; chrome-MCP is for debug only.
+5. **BACKUP before edit**: PreToolUse hook blocks if last commit isn't `[BACKUP]`.
+6. **Commit prefix**: `[BACKUP|CHANGE|META|HANDOFF|PROCESS|RULES|SEC|FIX]` — hook blocks otherwise.
+7. **Outline read-before-start**: /fix /todo /orchestrate check KB before working. Reuse, don't re-derive.
