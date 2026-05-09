@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "comment": "Require [BACKUP] commit before any file edit — enforces Pre-Change Protocol. BLOCKS on miss (exit 2). Accepts only [BACKUP] (per self-audit finding 1: [CHANGE] bypassed gate).",
+            "comment": "Require [BACKUP] commit before any file edit \u2014 enforces Pre-Change Protocol. BLOCKS on miss (exit 2). Accepts only [BACKUP] (per self-audit finding 1: [CHANGE] bypassed gate).",
             "command": "bash -c 'GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; LAST=$(git -C \"$GIT_ROOT\" log -1 --pretty=%s 2>/dev/null); [ -z \"$LAST\" ] && exit 0; echo \"$LAST\" | grep -qE \"^\\[BACKUP\\]\" && exit 0; echo \"=== PRE-CHANGE PROTOCOL REQUIRED ===\" >&2; echo \"Last commit is NOT a [BACKUP] commit.\" >&2; echo \"Last commit was: $LAST\" >&2; echo \"Run first:\" >&2; echo \"  git add <files> && git commit -m \\\"[BACKUP] Pre-change: <description> | Risks: <list> | Scope: <files>\\\"\" >&2; echo \"See: .claude/rules/workflow.md\" >&2; exit 2'"
           }
         ]
@@ -16,7 +16,7 @@
         "hooks": [
           {
             "type": "command",
-            "comment": "Config protection — block accidental edits to CLAUDE.md and settings.json without explicit user request",
+            "comment": "Config protection \u2014 block accidental edits to CLAUDE.md and settings.json without explicit user request",
             "command": "bash -c 'f=\"$CLAUDE_TOOL_INPUT_FILE_PATH\"; base=$(basename \"$f\"); if [[ \"$base\" == \"CLAUDE.md\" || \"$base\" == \"settings.json\" ]] && [[ \"$f\" == *\".claude/\"* || \"$f\" == *\"/CLAUDE.md\" ]]; then echo \"[PROTECTED] $base is a critical config file.\nAsk the user to confirm before editing.\"; exit 2; fi'"
           }
         ]
@@ -36,7 +36,7 @@
         "hooks": [
           {
             "type": "command",
-            "comment": "Block destructive shell commands — rm -rf, git init, git reset --hard, git push --force",
+            "comment": "Block destructive shell commands \u2014 rm -rf, git init, git reset --hard, git push --force",
             "command": "bash -c 'cmd=\"$CLAUDE_TOOL_INPUT_COMMAND\"; if echo \"$cmd\" | grep -qiE \"rm[[:space:]]+-rf|rm[[:space:]]+-[a-z]*r[a-z]*f|git[[:space:]]+init|git[[:space:]]+reset[[:space:]]+--hard|git[[:space:]]+push[[:space:]]+--force|git[[:space:]]+push[[:space:]]+-f[[:space:]]\"; then echo \"[BLOCKED] Destructive shell command detected.\nCommand: $cmd\nIf this is intentional, ask the user to run it manually.\"; exit 2; fi'"
           }
         ]
@@ -46,7 +46,7 @@
         "hooks": [
           {
             "type": "command",
-            "comment": "Block destructive SQL — DROP TABLE, TRUNCATE, DROP DATABASE, DELETE without WHERE",
+            "comment": "Block destructive SQL \u2014 DROP TABLE, TRUNCATE, DROP DATABASE, DELETE without WHERE",
             "command": "bash -c 'cmd=\"$CLAUDE_TOOL_INPUT_COMMAND\"; if echo \"$cmd\" | grep -qiE \"DROP[[:space:]]+(TABLE|DATABASE|SCHEMA)|TRUNCATE[[:space:]]+TABLE|TRUNCATE[[:space:]]+[a-z_]+\"; then echo \"[BLOCKED] Destructive SQL detected.\nCommand: $cmd\nIf this is intentional, ask the user to run it manually.\"; exit 2; fi'"
           }
         ]
@@ -57,7 +57,16 @@
           {
             "type": "command",
             "comment": "Warn on DELETE without WHERE clause (data loss risk)",
-            "command": "bash -c 'cmd=\"$CLAUDE_TOOL_INPUT_COMMAND\"; if echo \"$cmd\" | grep -qiE \"DELETE[[:space:]]+FROM[[:space:]]+[a-z_]+[[:space:]]*;\" && ! echo \"$cmd\" | grep -qi \"WHERE\"; then echo \"[WARN] DELETE without WHERE detected — will erase entire table.\nCommand: $cmd\nBlocked. Add a WHERE clause or run manually.\"; exit 2; fi'"
+            "command": "bash -c 'cmd=\"$CLAUDE_TOOL_INPUT_COMMAND\"; if echo \"$cmd\" | grep -qiE \"DELETE[[:space:]]+FROM[[:space:]]+[a-z_]+[[:space:]]*;\" && ! echo \"$cmd\" | grep -qi \"WHERE\"; then echo \"[WARN] DELETE without WHERE detected \u2014 will erase entire table.\nCommand: $cmd\nBlocked. Add a WHERE clause or run manually.\"; exit 2; fi'"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/todo-diablo-gate.sh"
           }
         ]
       }
@@ -68,18 +77,18 @@
         "hooks": [
           {
             "type": "command",
-            "comment": "TypeScript type-check after .ts/.tsx edit — auto-detects project root via tsconfig.json",
+            "comment": "TypeScript type-check after .ts/.tsx edit \u2014 auto-detects project root via tsconfig.json",
             "command": "bash -c 'f=\"$CLAUDE_TOOL_INPUT_FILE_PATH\"; [[ \"$f\" == *.tsx || \"$f\" == *.ts ]] || exit 0; d=$(dirname \"$f\"); while [ \"$d\" != \"/\" ]; do [ -f \"$d/tsconfig.json\" ] && { cd \"$d\" && npx tsc --noEmit 2>&1 | head -20; exit $?; }; d=$(dirname \"$d\"); done; echo \"[SKIP] No tsconfig.json found for $f\"'"
           },
           {
             "type": "command",
-            "comment": "Python ruff lint after .py edit — auto-detects project root via pyproject.toml",
+            "comment": "Python ruff lint after .py edit \u2014 auto-detects project root via pyproject.toml",
             "command": "bash -c 'f=\"$CLAUDE_TOOL_INPUT_FILE_PATH\"; [[ \"$f\" == *.py ]] || exit 0; d=$(dirname \"$f\"); while [ \"$d\" != \"/\" ]; do [ -f \"$d/pyproject.toml\" ] && { cd \"$d\" && uv run ruff check \"$f\" 2>&1 | head -10; exit $?; }; d=$(dirname \"$d\"); done; echo \"[SKIP] No pyproject.toml found for $f\"'"
           },
           {
             "type": "command",
             "comment": "Warn if console.log is left in frontend code",
-            "command": "bash -c 'f=\"$CLAUDE_TOOL_INPUT_FILE_PATH\"; if [[ \"$f\" == *.tsx || \"$f\" == *.ts || \"$f\" == *.js ]]; then grep -n \"console\\.log\" \"$f\" && echo \"[WARN] console.log found in $f — remove before deploy\" || true; fi'"
+            "command": "bash -c 'f=\"$CLAUDE_TOOL_INPUT_FILE_PATH\"; if [[ \"$f\" == *.tsx || \"$f\" == *.ts || \"$f\" == *.js ]]; then grep -n \"console\\.log\" \"$f\" && echo \"[WARN] console.log found in $f \u2014 remove before deploy\" || true; fi'"
           }
         ]
       }
@@ -90,32 +99,32 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; found=$(grep -rn \"console\\.log\" \"$GIT_ROOT/src\" \"$GIT_ROOT/frontend/src\" \"$GIT_ROOT/app\" 2>/dev/null | grep -v node_modules | head -5); [ -n \"$found\" ] && echo \"$found\" && echo \"[STOP CHECK] console.log found — clean up before deploy\" || true'"
+            "command": "bash -c 'GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; found=$(grep -rn \"console\\.log\" \"$GIT_ROOT/src\" \"$GIT_ROOT/frontend/src\" \"$GIT_ROOT/app\" 2>/dev/null | grep -v node_modules | head -5); [ -n \"$found\" ] && echo \"$found\" && echo \"[STOP CHECK] console.log found \u2014 clean up before deploy\" || true'"
           }
         ]
       },
       {
-        "comment": "Context budget warning — check session activity and warn before context gets too heavy",
+        "comment": "Context budget warning \u2014 check session activity and warn before context gets too heavy",
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; COMMITS=$(git -C \"$GIT_ROOT\" log --since=\"4 hours ago\" --oneline 2>/dev/null | wc -l | tr -d \" \"); if [ \"$COMMITS\" -gt 4 ]; then echo \"[CONTEXT BUDGET] $COMMITS commits this session — past 50% context.\nACTION REQUIRED:\n1. Commit current work ([WIP] if not finished)\n2. Write docs/handoff.md with exact state\n3. Run /compact to free context\n4. After compact — read handoff.md and continue\nDo NOT start another task before compacting.\"; elif [ \"$COMMITS\" -gt 2 ]; then echo \"[CONTEXT BUDGET] $COMMITS commits this session (~40% context).\nFinish current task, then write docs/handoff.md before starting next task.\"; fi'"
+            "command": "bash -c 'GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; COMMITS=$(git -C \"$GIT_ROOT\" log --since=\"4 hours ago\" --oneline 2>/dev/null | wc -l | tr -d \" \"); if [ \"$COMMITS\" -gt 4 ]; then echo \"[CONTEXT BUDGET] $COMMITS commits this session \u2014 past 50% context.\nACTION REQUIRED:\n1. Commit current work ([WIP] if not finished)\n2. Write docs/handoff.md with exact state\n3. Run /compact to free context\n4. After compact \u2014 read handoff.md and continue\nDo NOT start another task before compacting.\"; elif [ \"$COMMITS\" -gt 2 ]; then echo \"[CONTEXT BUDGET] $COMMITS commits this session (~40% context).\nFinish current task, then write docs/handoff.md before starting next task.\"; fi'"
           }
         ]
       },
       {
-        "comment": "Session log — append session entry for cost/activity tracking",
+        "comment": "Session log \u2014 append session entry for cost/activity tracking",
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; LOG=\"$GIT_ROOT/.claude/session-log.jsonl\"; COMMITS=$(git -C \"$GIT_ROOT\" log --since=\"4 hours ago\" --oneline 2>/dev/null | wc -l | tr -d \" \"); FILES=$(git -C \"$GIT_ROOT\" diff --stat HEAD~${COMMITS:-1} 2>/dev/null | tail -1 | tr -d \" \"); echo \"{\\\"ts\\\":\\\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\\\",\\\"commits\\\":$COMMITS,\\\"summary\\\":\\\"$FILES\\\"}\" >> \"$LOG\" 2>/dev/null; echo \"[SESSION LOGGED] $COMMITS commits this session → .claude/session-log.jsonl\"'"
+            "command": "bash -c 'GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0; LOG=\"$GIT_ROOT/.claude/session-log.jsonl\"; COMMITS=$(git -C \"$GIT_ROOT\" log --since=\"4 hours ago\" --oneline 2>/dev/null | wc -l | tr -d \" \"); FILES=$(git -C \"$GIT_ROOT\" diff --stat HEAD~${COMMITS:-1} 2>/dev/null | tail -1 | tr -d \" \"); echo \"{\\\"ts\\\":\\\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\\\",\\\"commits\\\":$COMMITS,\\\"summary\\\":\\\"$FILES\\\"}\" >> \"$LOG\" 2>/dev/null; echo \"[SESSION LOGGED] $COMMITS commits this session \u2192 .claude/session-log.jsonl\"'"
           }
         ]
       }
     ],
     "PreCompact": [
       {
-        "comment": "Auto-checkpoint before /compact — captures observable state to docs/handoff/ so context loss is bounded",
+        "comment": "Auto-checkpoint before /compact \u2014 captures observable state to docs/handoff/ so context loss is bounded",
         "hooks": [
           {
             "type": "command",
