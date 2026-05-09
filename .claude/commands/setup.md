@@ -183,6 +183,30 @@ For each missing/broken — print fix command:
 - launchd schedules absent (macOS) → "Run `/setup` → Setup launchd schedules"
 - bin/*.sh not executable → `chmod +x bin/*.sh`
 
+### Auto-offer to fix detected issues (mandatory after report)
+
+After printing the status table, if ANY actionable issue is detected, **immediately** call `AskUserQuestion` to offer fixing now without re-running /setup. Don't ask "do you want to fix?" — ask "which fix?":
+
+Build the options list dynamically from detected issues:
+
+| Detected issue | Option label | Action when picked |
+|---|---|---|
+| `launchd schedules: 0` on macOS | "Setup launchd schedules now" | Jump to Setup launchd schedules section, execute steps 1-11 inline |
+| `Project collection: missing` | "Bootstrap project collection now" | Jump to Bootstrap project collection section |
+| `bin/*.sh not executable` | "Fix bin permissions" | Run `chmod +x bin/*.sh` |
+| `docs/STACK.md missing` | "Create docs/STACK.md stub" | Create from template with placeholders for stack/lint_cmd/typecheck_cmd/test_cmd |
+| `docs/CONTEXT.md missing` | "Create docs/CONTEXT.md stub" | Create domain glossary stub |
+| `docs/adr/ missing` | "Create docs/adr/ directory" | `mkdir docs/adr` |
+| All checks pass | (skip AskUserQuestion, exit clean) | — |
+
+Always include "Skip — just report" option as last.
+
+If multiple issues detected, allow `multiSelect: true` so user can fix several at once. Order picks by impact: launchd > collection > docs.
+
+After fix executes — re-run the status table to show resolved state. If still issues remain → offer again. Loop until user picks "Skip — just report" or all green.
+
+**Critical:** This auto-offer is the difference between "/setup told me what's wrong" and "/setup fixed what's wrong". Verify health without auto-offer is a wasted interaction.
+
 ### Bootstrap project collection
 
 Use this mode when MCP outline is connected but the project's Outline collection
