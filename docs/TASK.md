@@ -9,7 +9,6 @@
 
 | ID | Task | Spec | Risk | Created |
 |----|------|------|------|---------|
-| T-020 | Centralize OpenRouter client initialization | [spec](specs/T-020-openrouter-client-dedup.md) | Low | 2026-05-09 |
 
 ---
 
