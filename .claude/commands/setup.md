@@ -236,7 +236,40 @@ Build the options list dynamically from detected issues:
 | `docs/STACK.md missing` | "Create docs/STACK.md stub" | Create from template with placeholders for stack/lint_cmd/typecheck_cmd/test_cmd |
 | `docs/CONTEXT.md missing` | "Create docs/CONTEXT.md stub" | Create domain glossary stub |
 | `docs/adr/ missing` | "Create docs/adr/ directory" | `mkdir docs/adr` |
+| `todo-diablo-gate.sh hook NOT registered` | "Register todo-diablo-gate PreToolUse hook" | Edit `.claude/settings.json` to add hook block (see template below) |
 | All checks pass | (skip AskUserQuestion, exit clean) | — |
+
+#### Detection: todo-diablo-gate hook registration
+
+```bash
+# Hook script must exist and be executable
+test -x .claude/hooks/todo-diablo-gate.sh || echo "HOOK_SCRIPT_MISSING"
+
+# Hook must be registered in settings.json hooks.PreToolUse array
+grep -q "todo-diablo-gate" .claude/settings.json 2>/dev/null || echo "HOOK_NOT_REGISTERED"
+```
+
+If `HOOK_NOT_REGISTERED` — propose adding to `.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/todo-diablo-gate.sh"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Use `Edit` tool with surgical merge (settings.json is project-customized — never `cp -f`). Read existing settings.json first; if `hooks.PreToolUse` array exists, append to it; if not, create the structure.
 
 Always include "Skip — just report" option as last.
 

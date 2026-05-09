@@ -1,9 +1,9 @@
 ---
 name: da
-description: 'Explicit Diablo invocation — adversarial critic for spec, plan, or implementation. Outputs FATAL/SERIOUS/SUSPICIOUS findings + verdict + action item per finding.'
+description: 'Explicit Diablo invocation — adversarial critic for spec, plan, or implementation. Outputs FATAL/SERIOUS/SUSPICIOUS findings + verdict + action item per finding. Runs Opus per agents/diablo.md frontmatter.'
 argument-hint: [spec | plan | impl | review] [target file or commit range]
-allowed-tools: Read, Grep, Glob, Bash
-model: sonnet
+allowed-tools: Read, Grep, Glob, Bash, Task
+model: opus
 ---
 
 > **Style:** Load `caveman-distillate` skill.

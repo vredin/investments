@@ -37,6 +37,52 @@ When in doubt — assume project-customized, use Edit.
 
 ---
 
+## Process Step Discipline (HARD RULE — applies to /todo, /fix, /orchestrate, /intent, /decompose, /review)
+
+User feedback during a structured workflow applies to the CURRENT step. It does NOT bypass the step.
+
+To skip a step, user types the literal token `/skip <step-name> <reason>`. Sonnet NEVER decides to skip on user's behalf. Sonnet rationalizing «user explained X», «task is trivial», «user seems annoyed» is the failure mode being prevented.
+
+If user pushes back without `/skip`:
+1. Acknowledge their input — apply it to current step
+2. Ask: "I'm at STEP X (<step-name>). Continue with your input applied? Or `/skip <step> <reason>` to skip explicitly, or `/abort` to switch to /quick-plan?"
+3. NEVER silently skip; NEVER proceed past current step until its done condition is met
+
+For trivial work (typo, rename, ≤10 lines) — use `/quick-plan` from the start. `/todo` does not have skip semantics; choosing `/todo` commits to all steps unless explicit `/skip`.
+
+Banned mental patterns (replaced by literal-token discipline):
+- «user explained X → don't ask Y»
+- «small task → skip prior-knowledge check»
+- «spec is fine → don't run Diablo»
+- «user seems annoyed → skip grill-me»
+
+If user EXPLICITLY uses `/skip <step> <reason>` — acknowledge, log in spec frontmatter `workflow_progress.<step>: skipped:<reason>`, proceed. The reason becomes part of the spec record so Diablo can flag rationalization patterns retroactively.
+
+---
+
+## Tool Failure Discipline (HARD RULE — per-tool semantics)
+
+Tools fail in different ways. Apply the right rule for the tool class:
+
+### Issue trackers (`gh issue create`, `linear`, `jira`)
+- Output containing `"skipped"` / `"already exists"` AND no resulting URL → STOP
+- Capture stderr + exit code + stdout into spec section 11 (Red Flags)
+- Investigate: re-run without `--skip-existing`/duplicate-suppression flags. Check if issue exists. Ask user if blocked.
+
+### Lint / type-check / test runners (`ruff`, `mypy`, `pytest`, `eslint`, `tsc`)
+- Reported failure count > 0 → STOP. Do NOT commit.
+- Paste full output (or relevant lines) into spec section 11 verbatim
+- Fix all reported issues OR document in spec why intentional (with Diablo verdict on the rationalization)
+
+### Other commands (`grep -q`, `git diff --quiet`, `comm -23`, `test`)
+- Exit nonzero is often the SUCCESS case (no match found, no diff, sets equal). Do NOT auto-treat as failure.
+- For unfamiliar tools — record exit code in spec, decide per case based on tool's documented exit-code semantics
+- Default: nonzero exit alone is NOT a STOP signal; investigate the tool's documented semantics first
+
+Banned: «tool returned skipped → continue silently», «5 lint errors → commit anyway», «test 1 failed → mark task done», «gh skipped → log and proceed».
+
+---
+
 ## TDD Discipline (HARD RULE — applies to ALL code-touching work)
 
 > Test before code. Period. Commands `/fix`, `/orchestrate`, `/improve-arch` enforce. Direct edits without these commands violate.

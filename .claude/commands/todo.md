@@ -197,13 +197,38 @@ If task does NOT touch security-sensitive areas → skip this step.
 
 ---
 
-**STEP 5 — Add to TASK.md**
+**STEP 5 — Diablo Spec Review (mandatory gate before backlog add)**
+
+Run `/da spec T-NNN` (Diablo). Capture verdict in spec frontmatter:
+
+```yaml
+---
+workflow_progress:
+  step_1_grill_me: complete | skipped:<reason>
+  step_2_5_prior_knowledge: complete | skipped:<reason>
+  step_3_research: complete
+  step_4_spec: complete
+  step_4_5_security: complete | skip:not-applicable | CRITICAL:<details>
+  step_5_diablo: ACCEPTABLE | PROCEED_CAUTION | FIX_FIRST | BLOCKED
+  step_6_github_issue: <issue_url> | failed:<reason> | skipped:<reason>
+---
+```
+
+> **This frontmatter is self-report by Sonnet — NOT an enforcement gate.** The actual gate is the PreToolUse hook `.claude/hooks/todo-diablo-gate.sh` that blocks Edit/Write of `docs/TASK.md` when `step_5_diablo` is missing or BLOCKED/FIX_FIRST.
+
+If Diablo verdict is **BLOCKED** or **FIX FIRST** — STOP. Do NOT proceed to STEP 6. Fix the spec, re-run `/da spec T-NNN`, repeat until ACCEPTABLE or PROCEED CAUTION.
+
+If Diablo verdict is **ACCEPTABLE** or **PROCEED CAUTION** — proceed to STEP 6.
+
+**STEP 6 — Add to TASK.md**
 
 1. Read `docs/TASK.md`
 2. Assign next available T-NNN id
 3. Add row to Backlog with link to spec
 
-**STEP 6 — Create GitHub Issue**
+(PreToolUse hook fires here — verifies spec frontmatter `step_5_diablo` value before allowing the Edit/Write to TASK.md.)
+
+**STEP 7 — Create GitHub Issue**
 
 ```bash
 gh issue create \
@@ -212,12 +237,15 @@ gh issue create \
   --label "backlog"
 ```
 
-**STEP 7 — Confirm**
+If the command outputs `"skipped"`, `"already exists"` without a resulting URL → STOP per workflow.md § Tool Failure Discipline. Capture stderr + investigate. Don't proceed to STEP 8 with a fake `step_6_github_issue: skipped`.
+
+**STEP 8 — Confirm**
 ```
 ✓ T-NNN added: <title>
 Risk: <level>
 Spec: docs/specs/T-NNN-slug.md
-GitHub: <issue URL or "skipped">
+GitHub: <issue URL>
+Diablo verdict: ACCEPTABLE | PROCEED CAUTION
 ```
 
 ---
@@ -243,5 +271,7 @@ GitHub: <issue URL or "skipped">
 - `/todo` is STRICTLY planning only — never write implementation code
 - Completed tasks go to `docs/archive/TASK_ARCHIVE.md` — NEVER stay in TASK.md
 - Archive entries MUST include git commit hash
-- grill-me is mandatory for `/todo add` — never skip it (replaces v2 ConfidenceChecker)
-- After spec is written and grill-me yields shared understanding, Diablo (`/da spec T-NNN`) is invoked automatically before backlog add
+- **All STEPs are mandatory unless user types `/skip <step-name> <reason>` explicitly** (see workflow.md § Process Step Discipline)
+- grill-me is mandatory for `/todo add` — to skip, user MUST type `/skip grill-me <reason>` (typically "trivial typo" — but for trivial work, prefer `/quick-plan` from the start)
+- Diablo (STEP 5) is gated by PreToolUse hook `.claude/hooks/todo-diablo-gate.sh` — TASK.md write is BLOCKED if spec frontmatter `step_5_diablo` is missing or BLOCKED/FIX_FIRST
+- For trivial work — use `/quick-plan` instead of `/todo`. `/quick-plan` does not have the full step ceremony.

@@ -76,6 +76,35 @@ Cluster gathered evidence by category:
 | Time wasted in rabbit holes | Stuck Protocol triggered | every occurrence is a finding |
 | **Banned `cp -f` on project files** | `cp -f` invocation on any file in the project-customized list (see workflow.md → "Project file overwrite discipline") | every occurrence is a finding (HIGH severity) |
 
+### Specific detection: TASK.md write without Diablo verdict (HIGH severity)
+
+For each T-NNN currently in `docs/TASK.md`, verify spec has `step_5_diablo` frontmatter set to ACCEPTABLE or PROCEED_CAUTION. Catches both:
+- Tasks added BEFORE the PreToolUse hook was activated
+- Tasks added by Sonnet rationalizing «trivial, skip Diablo»
+
+```bash
+for tid in $(grep -oE 'T-[0-9]{3,4}' docs/TASK.md 2>/dev/null | sort -u); do
+  spec=$(ls docs/specs/${tid}-*.md 2>/dev/null | head -1)
+  if [ -z "$spec" ]; then
+    echo "MISSING_SPEC: $tid (in TASK.md but no spec in docs/specs/)"
+    continue
+  fi
+  # Check frontmatter for step_5_diablo
+  verdict=$(awk '/^---[[:space:]]*$/{fm=!fm;next} fm && /^[[:space:]]*step_5_diablo:/{sub(/^[^:]*:[[:space:]]*/,"");sub(/[[:space:]]*$/,"");gsub(/"/,"");print;exit}' "$spec")
+  case "$verdict" in
+    ACCEPTABLE|PROCEED_CAUTION|"PROCEED CAUTION") ;;
+    BLOCKED|FIX_FIRST|"FIX FIRST") echo "DIABLO_BLOCKED_BUT_IN_BACKLOG: $tid (verdict: $verdict)" ;;
+    "") echo "DIABLO_VERDICT_MISSING: $tid (no step_5_diablo in spec frontmatter)" ;;
+    *) echo "DIABLO_VERDICT_UNKNOWN: $tid (value: $verdict)" ;;
+  esac
+done
+```
+
+For each match → finding HIGH severity:
+- File path: `docs/specs/<spec>.md` and `docs/TASK.md`
+- Suggest fix: «Retroactively run `/da spec $tid`. If FIX FIRST/BLOCKED — move task back to spec phase via `/todo` flow + fix issues. Update spec frontmatter `step_5_diablo` with verdict.»
+- Reference: workflow.md § Process Step Discipline + .claude/commands/todo.md STEP 5
+
 ### Specific detection: `cp -f` on customized files
 
 ```bash
