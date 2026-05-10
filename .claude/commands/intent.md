@@ -29,6 +29,44 @@ external `requirements-analyzer` framework first, then run `/decompose` on its o
 2. Find next free PRD-NNN number: `ls docs/prd/PRD-*.md 2>/dev/null | grep -oE 'PRD-[0-9]+' | sort -r | head -1`
 3. Load skills: `spec-normalizer`, `verification-pass`, `humanizer`, `decision-matrix`, `planning`
 
+## STEP 1.5 — Office Hours interrogation (mandatory before research)
+
+Before any research happens, push back on user's framing. Most "I want X" requests describe the symptom, not the product. Six forcing questions, **one at a time** via `AskUserQuestion`. Wait for answer before next.
+
+**Q1 — Concrete pain (not hypothesis)**:
+> "Опиши ПОСЛЕДНИЙ раз когда эта проблема реально стрельнула. Кто? Когда? Сколько потеряли времени/денег/клиентов? Если не можешь вспомнить конкретный случай — это hypothesis, не problem. Готов отказаться от идеи?"
+
+If user can't name a concrete recent incident → flag in PRD §8 as «No validated pain — proceeding on hypothesis».
+
+**Q2 — Reframe attempt (challenge their words)**:
+> "Ты сказал «$ARGUMENTS». Но судя по описанию, ты строишь не [literal interpretation], а [reframed bigger thing]. Согласен с reframe? Или literal interpretation точнее?"
+
+Example: «I want a daily briefing app» → reframe to «AI chief of staff with daily briefing as one of N capabilities». Force user to confirm or reject.
+
+**Q3 — Hidden capabilities** (extract what they didn't realize they're describing):
+> "Из твоего описания я вижу 3-5 capabilities которые ты НЕ упомянул явно: [list]. Какие из них реально нужны? Какие out of scope?"
+
+**Q4 — Premise challenges (4 пункта, бьёт по assumptions)**:
+> "Ты исходишь из 4 предпосылок: [P1, P2, P3, P4]. По каждой — agree / disagree / adjust?"
+
+If user disagrees with P1 → may unlock 10x simpler solution.
+
+**Q5 — 10-star product hiding inside (Garry Tan's CEO pattern)**:
+> "Если бы я делал это в YC и хотел построить 10-star product (не 5-star MVP) — фича была бы [bigger vision]. Это твой амбициозный потолок? Или 5-star MVP сейчас — реалистичнее?"
+
+User's choice between «build for now / build for scale» frames whole PRD.
+
+**Q6 — Narrowest wedge (smallest thing that delivers signal)**:
+> "Что самая узкая версия которую можно отгрузить ЗАВТРА чтобы получить feedback от реальных пользователей? Не MVP — wedge. Часто это 10% scope."
+
+Output of STEP 1.5 → mental notes, will become PRD §1 (validated pain), §4 (out of scope), §9 (phasing).
+
+If user signals impatience («давай дальше», «ясно, поехали»):
+- Acknowledge their answer to current Q
+- DO NOT skip remaining Q's silently
+- Confirm: «Pre-research interrogation: STEP 1.5 has 6 questions, мы на Q[N]. Continue? `/skip office-hours <reason>` to bypass explicitly?»
+- Per workflow.md § Process Step Discipline — silent skip = banned
+
 ## STEP 2 — Outline read-before-start (mandatory)
 
 Search Outline before starting — may already be a similar product / pattern documented.

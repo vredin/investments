@@ -43,6 +43,18 @@ Load: `systematic-debugging` · `anti-best-practice`. Agents: `Diablo`.
 ### Code review / pre-commit
 Load: `clean-code` · `anti-best-practice`. Agents: `Diablo` · `code-reviewer` · `design-reviewer` (frontend) · `performance-analyzer` (logic) · `Rex` (security).
 - Or use `/review`.
+- For security-critical code: also `/codex:review` (cross-model second opinion).
+- For pre-deploy on auth/payments: also `/codex:adversarial-review`.
+
+### DX review (API / CLI / SDK / library — for OTHER developers)
+Use `/plan-devex-review` (interactive, scores 7 DX dimensions: install/TTHW/errors/docs/reversibility/composability/recovery).
+- Modes: DX_EXPANSION (greenfield), DX_POLISH (mature), DX_TRIAGE (broken).
+- Outputs requirements to PRD §13 OR friction list to docs/dx-audit/<date>.md.
+
+### Post-deploy health check
+Use `/canary <production_url>` — probe critical routes, catch JS errors, response time regressions, console errors.
+- First run saves baseline. Subsequent runs compare drift.
+- Schedulable via launchd for periodic monitoring.
 
 ### Refactor (architecture-level)
 Load: `improve-codebase-architecture` (sub: DEEPENING.md, INTERFACE-DESIGN.md, LANGUAGE.md).

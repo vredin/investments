@@ -239,6 +239,35 @@ After running:
 
 ---
 
+## STEP 4.85 — Codex cross-model second opinion (optional, recommended for security-critical changes)
+
+OpenAI Codex CLI plugin is installed via `codex@openai-codex` marketplace. Two ready-made commands:
+
+| Command | Mode | When to use |
+|---|---|---|
+| `/codex:review` | Pass/fail gate — independent code review | Always recommended on PRs touching auth, payments, business logic R-NNN |
+| `/codex:adversarial-review` | Actively tries to break the code | Security-critical changes, before deploy |
+
+Why use both Diablo (Sonnet/Opus) AND Codex (OpenAI):
+- Different model families have **different blind spots**
+- Same Anthropic models (Sonnet + Opus in /council) are **correlated**: they miss similar issues
+- Cross-model review catches issues that one family consistently misses
+
+**Decision:**
+- Routine /review (typo, refactor, internal tool): skip /codex
+- Security-sensitive (auth, payments, secrets, PII): run `/codex:review`
+- Pre-deploy on financial/auth code: run `/codex:adversarial-review`
+
+If Codex finds issues NOT in /review STEP 4.9 Diablo report → cross-reference, escalate accordingly.
+
+```
+/codex:review HEAD~1..HEAD
+```
+
+Output blends with Diablo findings in STEP 5 report (new section: «Codex (OpenAI second opinion)»).
+
+If `codex@openai-codex` plugin is not installed (`gh repo view garrytan/gstack` direction OR `npx @openai/codex setup`) → skip with note «No cross-model second opinion — Diablo only».
+
 ## STEP 4.9 — Diablo (mandatory)
 
 Invoke `/da impl <scope>` (Diablo agent). Adversarial check across all the above findings.
@@ -276,6 +305,11 @@ Merge findings from all three agents into one report:
 
 ### Performance (if applicable)
 <performance-analyzer findings — CRITICAL / HIGH / MEDIUM / OK>
+
+### Codex (OpenAI second opinion, if applicable)
+<codex:review verdict — pass/fail/concerns>
+<codex:adversarial-review findings — critical issues found by attempting to break the code>
+<cross-model overlap analysis — findings unique to Codex vs unique to Diablo>
 
 ### Static Analysis Tier 2 (Python only, if applicable)
 <vulture findings — confidence 100 / 80-99>
