@@ -58,14 +58,17 @@ model: sonnet
 | Command | One-liner | When to use |
 |---|---|---|
 | `/fix <bug-description \| #issue>` | Disciplined bug fix: failing-test-first + Outline check + Diablo + auto-publish F-NNN | Real bug. NOT for typos — for those just edit. |
-| `/review [scope]` | Full pre-merge pipeline: code-reviewer + Rex + qa-expert + perf + design + Diablo | Before merging changes. If unsure, use /review. |
+| `/review [scope]` | Full pre-merge pipeline: code-reviewer + Rex + qa-expert + perf + design + Diablo + Tier 2 (vulture+pylint) | Before merging changes. If unsure, use /review. |
 | `/da [spec\|plan\|impl\|review] [target]` | Explicit Diablo invocation | Hand-pick: attack a spec/plan/impl when you don't trust auto-flows |
 | `/improve-arch [path]` | Refactor for depth (Ousterhout-style) — ADR generation, module deepening | When code feels shallow / hard-to-test / needs restructure. NOT for routine bugfix. |
 | `/council <question>` | Opus + Sonnet parallel deliberation; surfaces disagreement | Architecture forks, build-vs-buy, security-critical decisions where one model's bias matters |
+| `/codex:review` / `/codex:adversarial-review` | OpenAI Codex CLI second opinion (different model family) | Cross-model independent review. Run on security-critical changes; pre-deploy on auth/payments |
 | `/gaps [missing\|modern\|both\|<path>]` | Service-level audit: what's missing vs SaaS checklist; what's outdated vs 2025-26 idioms | Periodic checkup; before major release; onboarding to existing project |
+| `/canary <production_url>` | Post-deploy health check: route probes + console errors + drift vs baseline | After deploy. First run saves baseline. Schedulable via launchd for periodic monitoring. |
+| `/plan-devex-review <PRD\|spec\|live-tool>` | DX review for APIs/CLIs/SDKs (NOT end-user products). 7-dim score + TTHW benchmark | Building developer-facing tool. 3 modes: EXPANSION (greenfield), POLISH (mature), TRIAGE (broken) |
 | `/test [backend\|frontend\|e2e\|all]` | Run test suites (auto-detects stack from STACK.md) | Direct test runner. Used internally by /fix and /orchestrate. |
 
-## 🟣 Auto via /loop (you don't invoke directly)
+## 🟣 Auto via launchd (you don't invoke directly)
 
 | Command | Cadence | What |
 |---|---|---|
@@ -73,6 +76,7 @@ model: sonnet
 | `/docs sync --publish` | Mon 09:00 weekly (via launchd) | Audit + sync ARCHITECTURE/API/Runbook from real code, publish to Outline `Project: <name>` |
 | `/self-audit` | Fri 10:00 weekly (via launchd) | Local process improvement audit; finds workflow violations, suggests diff-ready fixes |
 | `/self-audit --global` | 1st & 15th 11:00 bi-weekly (via launchd) | Cross-project process audit via Outline aggregation |
+| `/canary <url>` | Optional: every 30 min business hours | Post-deploy health probes + drift detection vs baseline |
 
 ## 🟤 Internal (called by other commands; don't invoke directly)
 
@@ -105,16 +109,20 @@ Search via `mcp__outline__search_documents` (preferred) or `bin/outline.sh searc
 ## When stuck — decision tree
 
 ```
-Want to know something      → /general
-Found a bug                  → /fix
-Have a vague new idea        → /intent → /decompose
-Have requirements already    → /decompose
-Have one specific task       → /todo add → /orchestrate
-Want to ship something       → /orchestrate
-Code feels wrong             → /improve-arch
-Need a sanity check          → /gaps both
-Architectural decision stuck → /council
-Forgot what's where          → /911 (you're here)
+Want to know something          → /general
+Found a bug                      → /fix
+Have a vague new idea            → /intent → /decompose  (intent runs office-hours interrogation first)
+Have requirements already        → /decompose
+Have one specific task           → /todo add → /orchestrate
+Want to ship something           → /orchestrate
+Code feels wrong                 → /improve-arch
+Need a sanity check              → /gaps both
+Architectural decision stuck     → /council
+Just deployed — check prod ok?   → /canary <production_url>
+Building API/CLI/SDK for devs    → /plan-devex-review
+Security-critical PR             → /review + /codex:review (cross-model)
+Pre-deploy auth/payments         → /codex:adversarial-review
+Forgot what's where              → /911 (you're here)
 ```
 
 ---
