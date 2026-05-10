@@ -66,7 +66,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/todo-diablo-gate.sh"
+            "command": "bash -c 'GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null); [ -n \"$GIT_ROOT\" ] && bash \"$GIT_ROOT/.claude/hooks/todo-diablo-gate.sh\" || exit 0'"
           }
         ]
       }
@@ -128,7 +128,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/pre-compact-checkpoint.sh"
+            "command": "bash -c 'GIT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null); [ -n \"$GIT_ROOT\" ] && bash \"$GIT_ROOT/.claude/hooks/pre-compact-checkpoint.sh\" || exit 0'"
           }
         ]
       }
