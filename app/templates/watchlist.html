@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}Мониторинг тикеров — Инвестиции{% endblock %}
+
+{% block head %}
+<style>
+  h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 1.25rem; }
+  .add-row { display: flex; gap: .6rem; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .add-row input { border: 1px solid #ddd; border-radius: 6px; padding: .45rem .75rem; font-size: 1rem; width: 180px; text-transform: uppercase; }
+  .add-row button { background: #1a1a2e; color: #fff; border: none; border-radius: 6px; padding: .5rem 1.25rem; cursor: pointer; font-size: .9rem; }
+  .add-row button:hover { opacity: .85; }
+  .hint { font-size: .78rem; color: #aaa; }
+  .table-wrap { background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+  th { background: #f9f9f9; padding: .65rem .9rem; text-align: left; font-size: .72rem; color: #888; text-transform: uppercase; letter-spacing: .05em; border-bottom: 1px solid #eee; }
+  td { padding: .65rem .9rem; border-bottom: 1px solid #f0f0f0; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafafa; }
+  .ticker-link { font-weight: 600; color: #1a1a2e; text-decoration: none; }
+  .ticker-link:hover { text-decoration: underline; }
+  .pos { color: #16a34a; } .neg { color: #dc2626; }
+  .status-ok { color: #16a34a; } .status-failed { color: #dc2626; } .status-new { color: #888; }
+  .btn-del { background: none; border: 1px solid #e5e5e5; border-radius: 5px; padding: .3rem .7rem; cursor: pointer; color: #999; font-size: .8rem; }
+  .btn-del:hover { border-color: #dc2626; color: #dc2626; }
+  .btn-open { background: #1a1a2e; color: #fff; border: none; border-radius: 5px; padding: .3rem .7rem; cursor: pointer; font-size: .8rem; text-decoration: none; margin-right: .3rem; }
+  .btn-open:hover { opacity: .85; }
+  .empty { padding: 3rem; text-align: center; color: #bbb; font-size: .9rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<h1>Мониторинг тикеров</h1>
+
+<form method="POST" action="/watchlist/add" class="add-row">
+  <input type="text" name="ticker" placeholder="MSFT, VWCE.AS…" maxlength="20" required autocomplete="off">
+  <button type="submit">+ Добавить</button>
+  <span class="hint">Для европейских ETF: VWCE.AS (Амстердам)</span>
+</form>
+
+<div class="table-wrap">
+{% if items %}
+<table>
+  <thead>
+    <tr>
+      <th>Тикер</th>
+      <th>Название</th>
+      <th>Цена</th>
+      <th>YTD%</th>
+      <th>Просадка%</th>
+      <th>Обновлено</th>
+      <th>Статус</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for item in items %}
+  <tr>
+    <td><a href="/watchlist/{{ item.ticker }}" class="ticker-link">{{ item.ticker }}</a></td>
+    <td>{{ item.name or '—' }}</td>
+    <td style="{{ 'color:#aaa' if item.sync_status != 'ok' else '' }}">{{ "%.2f"|format(item.current_price) if item.current_price else '—' }}{% if item.currency %} <small style="color:#aaa">{{ item.currency }}</small>{% endif %}</td>
+    <td class="{{ 'pos' if item.ytd_return_pct and item.ytd_return_pct >= 0 else 'neg' }}">
+      {{ "%+.1f"|format(item.ytd_return_pct) ~ "%" if item.ytd_return_pct is not none else '—' }}
+    </td>
+    <td class="{{ 'neg' if item.drawdown_from_peak and item.drawdown_from_peak < 0 else '' }}">
+      {{ "%.1f"|format(item.drawdown_from_peak) ~ "%" if item.drawdown_from_peak is not none else '—' }}
+    </td>
+    <td style="color:#888;font-size:.8rem;">
+      {{ item.last_synced_at.strftime('%d.%m %H:%M') if item.last_synced_at else '—' }}
+    </td>
+    <td>
+      {% if item.sync_status == 'ok' %}
+        <span class="status-ok">✓</span>
+      {% elif item.sync_status == 'failed' %}
+        <span class="status-failed">⚠</span>
+      {% else %}
+        <span class="status-new">?</span>
+      {% endif %}
+    </td>
+    <td>
+      <a href="/watchlist/{{ item.ticker }}" class="btn-open">Открыть</a>
+      <form method="POST" action="/watchlist/{{ item.ticker }}/remove" style="display:inline;">
+        <button type="submit" class="btn-del" onclick="return confirm('Удалить {{ item.ticker }}?')">✕</button>
+      </form>
+    </td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="empty">Watchlist пуст. Добавьте тикер выше или через страницу «Анализ тикера».</div>
+{% endif %}
+</div>
+{% endblock %}

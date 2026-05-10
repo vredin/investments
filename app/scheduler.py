@@ -7,6 +7,18 @@ logger = logging.getLogger(__name__)
 scheduler = BackgroundScheduler()
 
 
+def refresh_watchlist_daily() -> None:
+    from app.db import SessionLocal
+    from app.services.watchlist_service import refresh_prices
+
+    with SessionLocal() as db:
+        count = refresh_prices(db)
+        logger.info(
+            "Watchlist refresh complete: %d ok, remaining with sync_status=failed visible in /watchlist",
+            count,
+        )
+
+
 def sync_prices_daily() -> None:
     logger.info("Job sync_prices_daily triggered, not yet implemented")
 
@@ -26,6 +38,18 @@ scheduler.add_job(
     minute=0,
     id="sync_prices_daily",
     replace_existing=True,
+)
+
+scheduler.add_job(
+    refresh_watchlist_daily,
+    trigger="cron",
+    hour=6,
+    minute=0,
+    id="refresh_watchlist_daily",
+    replace_existing=True,
+    max_instances=1,
+    coalesce=True,
+    misfire_grace_time=86400,
 )
 
 scheduler.add_job(

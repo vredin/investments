@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}{{ item.ticker }} — Мониторинг{% endblock %}
+
+{% block head %}
+<style>
+  .back-link { font-size: .85rem; color: #888; text-decoration: none; display: inline-block; margin-bottom: 1rem; }
+  .back-link:hover { color: #1a1a2e; }
+  .ticker-header { font-size: 1.4rem; font-weight: 700; color: #1a1a2e; }
+  .ticker-sub { font-size: .9rem; color: #888; margin-bottom: 1.25rem; }
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.25rem; }
+  @media(max-width: 700px) { .metrics { grid-template-columns: 1fr 1fr; } }
+  .metric-card { background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); padding: 1rem; }
+  .metric-card .label { font-size: .72rem; color: #aaa; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .3rem; }
+  .metric-card .value { font-size: 1.4rem; font-weight: 700; color: #1a1a2e; }
+  .pos { color: #16a34a; } .neg { color: #dc2626; }
+  .chart-panel { background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); padding: 1.25rem; margin-bottom: 1.25rem; }
+  .chart-panel h2 { font-size: .78rem; color: #999; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 1rem; }
+  .analysis-panel { background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); padding: 1.5rem; margin-bottom: 1.25rem; }
+  .analysis-panel h2 { font-size: .78rem; color: #999; text-transform: uppercase; letter-spacing: .06em; margin-bottom: .75rem; }
+  .analysis-text { font-size: .92rem; line-height: 1.7; color: #333; white-space: pre-wrap; }
+  .no-analysis { font-size: .85rem; color: #aaa; font-style: italic; }
+  .analysis-meta { font-size: .75rem; color: #bbb; margin-top: .5rem; }
+  .btn-refresh { background: #1a1a2e; color: #fff; border: none; border-radius: 6px; padding: .45rem 1.1rem; cursor: pointer; font-size: .85rem; margin-top: .75rem; }
+  .btn-refresh:hover { opacity: .85; }
+  .sync-info { font-size: .75rem; color: #aaa; margin-bottom: 1.25rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="/watchlist" class="back-link">← Все тикеры</a>
+
+<div class="ticker-header">{{ item.ticker }}</div>
+<div class="ticker-sub">
+  {{ item.name or '' }}{% if item.currency %} · {{ item.currency }}{% endif %}
+</div>
+
+<div class="sync-info">
+  Обновлено: {{ item.last_synced_at.strftime('%d.%m.%Y %H:%M') if item.last_synced_at else 'никогда' }}
+  {% if item.sync_status == 'failed' %} · <span style="color:#dc2626">⚠ последняя синхронизация провалилась</span>{% endif %}
+</div>
+
+<div class="metrics">
+  <div class="metric-card">
+    <div class="label">Текущая цена</div>
+    <div class="value">{{ "%.2f"|format(item.current_price) if item.current_price else '—' }}</div>
+  </div>
+  <div class="metric-card">
+    <div class="label">YTD доходность</div>
+    <div class="value {{ 'pos' if item.ytd_return_pct and item.ytd_return_pct >= 0 else 'neg' }}">
+      {{ "%+.1f"|format(item.ytd_return_pct) ~ "%" if item.ytd_return_pct is not none else '—' }}
+    </div>
+  </div>
+  <div class="metric-card">
+    <div class="label">Просадка от максимума</div>
+    <div class="value {{ 'neg' if item.drawdown_from_peak and item.drawdown_from_peak < 0 else '' }}">
+      {{ "%.1f"|format(item.drawdown_from_peak) ~ "%" if item.drawdown_from_peak is not none else '—' }}
+    </div>
+  </div>
+  <div class="metric-card">
+    <div class="label">Волатильность</div>
+    <div class="value">{{ "%.1f"|format(item.volatility_pct) ~ "%" if item.volatility_pct is not none else '—' }}</div>
+  </div>
+</div>
+
+<div class="chart-panel">
+  <h2>Цена + SMA200 (1 год)</h2>
+  <canvas id="priceChart" height="120" data-rendered="false"></canvas>
+</div>
+
+<div class="chart-panel">
+  <h2>RSI 14 (1 год)</h2>
+  <canvas id="rsiChart" height="80" data-rendered="false"></canvas>
+</div>
+
+<div class="analysis-panel">
+  <h2>LLM-анализ</h2>
+  {% if item.llm_analysis %}
+    <div class="analysis-text">{{ item.llm_analysis }}</div>
+    <div class="analysis-meta">Анализ от {{ item.llm_analyzed_at.strftime('%d.%m.%Y') if item.llm_analyzed_at else '' }}</div>
+  {% else %}
+    <div class="no-analysis">Анализ ещё не запускался. Нажмите кнопку ниже.</div>
+  {% endif %}
+  <form method="POST" action="/watchlist/{{ item.ticker }}/refresh-llm">
+    <button type="submit" class="btn-refresh">Обновить анализ</button>
+  </form>
+</div>
+
+<script>
+(async function() {
+  const ticker = "{{ item.ticker }}";
+  let chartData;
+  try {
+    const resp = await fetch(`/watchlist/${ticker}/chart-data`);
+    chartData = await resp.json();
+  } catch(e) {
+    return;
+  }
+  if (chartData.error || !chartData.dates) return;
+
+  const labels = chartData.dates;
+  const priceCanvas = document.getElementById("priceChart");
+  const rsiCanvas = document.getElementById("rsiChart");
+
+  new Chart(priceCanvas, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        {
+          label: "Цена",
+          data: chartData.closes,
+          borderColor: "#1a1a2e",
+          borderWidth: 1.5,
+          pointRadius: 0,
+          tension: 0.1,
+        },
+        {
+          label: "SMA200",
+          data: chartData.sma200,
+          borderColor: "#f59e0b",
+          borderWidth: 1.5,
+          pointRadius: 0,
+          tension: 0.1,
+          spanGaps: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: "index", intersect: false },
+      plugins: { legend: { labels: { font: { size: 11 } } } },
+      scales: {
+        x: { ticks: { maxTicksLimit: 8, font: { size: 10 } } },
+        y: { ticks: { font: { size: 10 } } },
+      },
+    },
+  });
+  priceCanvas.dataset.rendered = "true";
+
+  new Chart(rsiCanvas, {
+    type: "line",
+    data: {
+      labels,
+      datasets: [{
+        label: "RSI 14",
+        data: chartData.rsi,
+        borderColor: "#6366f1",
+        borderWidth: 1.5,
+        pointRadius: 0,
+        tension: 0.1,
+        spanGaps: false,
+      }],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { font: { size: 11 } } } },
+      scales: {
+        x: { ticks: { maxTicksLimit: 8, font: { size: 10 } } },
+        y: { min: 0, max: 100, ticks: { font: { size: 10 } } },
+      },
+    },
+  });
+  rsiCanvas.dataset.rendered = "true";
+})();
+</script>
+{% endblock %}

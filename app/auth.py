@@ -22,7 +22,7 @@ def create_session_cookie(response: Response) -> None:
         key=_COOKIE_NAME,
         value=token,
         httponly=True,
-        samesite="lax",
+        samesite="strict",
         max_age=get_settings().SESSION_MAX_AGE,
     )
 

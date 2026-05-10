@@ -42,7 +42,13 @@
 {% endif %}
 
 {% if ticker_data %}
-<div class="ticker-header">{{ ticker_data.ticker }}</div>
+<div style="display:flex;align-items:center;gap:1rem;margin-bottom:.25rem;">
+  <div class="ticker-header">{{ ticker_data.ticker }}</div>
+  <form method="POST" action="/watchlist/add" style="margin:0;">
+    <input type="hidden" name="ticker" value="{{ ticker_data.ticker }}">
+    <button type="submit" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:.35rem .9rem;cursor:pointer;font-size:.82rem;">+ В мониторинг</button>
+  </form>
+</div>
 <div class="ticker-name">{{ ticker_data.name }}{% if ticker_data.currency %} · {{ ticker_data.currency }}{% endif %}</div>
 
 <div class="metrics">

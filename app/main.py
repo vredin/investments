@@ -16,6 +16,7 @@ from app.routers import (
     report,
     settings,
     sync,
+    watchlist,
 )
 from app.scheduler import scheduler
 
@@ -44,6 +45,7 @@ app.include_router(report.router)
 app.include_router(settings.router)
 app.include_router(admin.router)
 app.include_router(analyze.router)
+app.include_router(watchlist.router)
 app.include_router(calculators.router)
 
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
