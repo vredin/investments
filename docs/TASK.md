@@ -9,6 +9,7 @@
 
 | ID | Task | Spec | Risk | Created |
 |----|------|------|------|---------|
+| T-021 | Watchlist: мониторинг тикеров (страница + графики + ежедневный refresh) | [spec](specs/T-021-watchlist-monitoring.md) | Medium | 2026-05-10 |
 
 ---
 
