@@ -132,3 +132,22 @@ class CourseChunk(Base):
     page_num: Mapped[int | None] = mapped_column(Integer)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     embedding: Mapped[list | None] = mapped_column(Vector(1024))
+
+
+class WatchlistItem(Base):
+    __tablename__ = "watchlist_items"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ticker: Mapped[str] = mapped_column(String(20), unique=True, nullable=False, index=True)
+    name: Mapped[str | None] = mapped_column(String(200))
+    currency: Mapped[str | None] = mapped_column(String(10), default="USD")
+    added_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime)
+    sync_status: Mapped[str] = mapped_column(String(10), default="new")
+    current_price: Mapped[float | None] = mapped_column(Float)
+    ytd_return_pct: Mapped[float | None] = mapped_column(Float)
+    drawdown_from_peak: Mapped[float | None] = mapped_column(Float)
+    volatility_pct: Mapped[float | None] = mapped_column(Float)
+    llm_analysis: Mapped[str | None] = mapped_column(Text)
+    llm_analyzed_at: Mapped[datetime | None] = mapped_column(DateTime)
+    chart_data_json: Mapped[str | None] = mapped_column(Text)
