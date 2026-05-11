@@ -9,7 +9,6 @@
 
 | ID | Task | Spec | Risk | Created |
 |----|------|------|------|---------|
-| T-022 | Dip Scanner: LLM-оценка просадок watchlist (кнопка «Скан просадок» + verdict/rationale) | [spec](specs/T-022-dip-scanner.md) | Low | 2026-05-11 |
 
 ---
 

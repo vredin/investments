@@ -25,3 +25,4 @@
 | T-018 | BTD-сигнал на /recommend: баннер при просадке VWCE ≤ threshold + допбюджет underweight-first | 2026-05-07 | 16b3f35 |
 | T-020 | Centralize OpenRouter client initialization | 2026-05-09 | 88f7504 |
 | T-021 | Watchlist: мониторинг тикеров (страница + графики + ежедневный refresh) | 2026-05-10 | fdf5b00 |
+| T-022 | Dip Scanner: LLM-оценка просадок watchlist | 2026-05-11 | 61b436e |
