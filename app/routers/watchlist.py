@@ -11,6 +11,8 @@ from sqlalchemy.orm import Session
 from app.auth import login_required
 from app.db import get_db
 from app.models import WatchlistItem
+from app.services import settings_service
+from app.services.dip_scanner import scan_dips
 from app.services.ticker_analysis import validate_ticker
 from app.services.watchlist_service import add_ticker, refresh_llm, remove_ticker
 
@@ -52,6 +54,18 @@ async def watchlist_remove(ticker: str, request: Request, db: Session = Depends(
         raise HTTPException(status_code=422, detail="invalid ticker")
     remove_ticker(clean, db)
     return RedirectResponse(url="/watchlist", status_code=303)
+
+
+@router.get("/scan", response_class=HTMLResponse, dependencies=[Depends(login_required)])
+def watchlist_scan(request: Request, db: Session = Depends(get_db)):
+    threshold = settings_service.get_float(db, "btd_threshold_pct") or -10.0
+    results = scan_dips(db, threshold_pct=threshold)
+    total = db.query(WatchlistItem).count()
+    return templates.TemplateResponse(request, "watchlist_scan.html", {
+        "results": results,
+        "threshold": threshold,
+        "total_watchlist": total,
+    })
 
 
 @router.get("/{ticker}", response_class=HTMLResponse, dependencies=[Depends(login_required)])

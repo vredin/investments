@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Скан просадок — Инвестиции{% endblock %}
+
+{% block head %}
+<style>
+  .back-link { font-size: .85rem; color: #888; text-decoration: none; display: inline-block; margin-bottom: 1rem; }
+  .back-link:hover { color: #1a1a2e; }
+  h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: .35rem; }
+  .scan-meta { font-size: .82rem; color: #888; margin-bottom: 1.5rem; }
+  .empty-state { background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); padding: 3rem; text-align: center; color: #bbb; font-size: .95rem; }
+  .results-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
+  .card { background: #fff; border-radius: 8px; box-shadow: 0 1px 6px rgba(0,0,0,0.08); padding: 1.25rem; border-left: 4px solid #e5e5e5; }
+  .card.strong-buy { border-color: #16a34a; }
+  .card.buy { border-color: #4ade80; }
+  .card.hold { border-color: #f59e0b; }
+  .card.skip { border-color: #dc2626; }
+  .card.error { border-color: #d1d5db; opacity: .7; }
+  .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: .75rem; }
+  .ticker-name { font-weight: 700; font-size: 1.1rem; color: #1a1a2e; text-decoration: none; }
+  .ticker-name:hover { text-decoration: underline; }
+  .ticker-sub { font-size: .78rem; color: #aaa; margin-top: .1rem; }
+  .badge { font-size: .72rem; font-weight: 700; padding: .3rem .65rem; border-radius: 4px; text-transform: uppercase; letter-spacing: .05em; }
+  .badge.strong-buy { background: #dcfce7; color: #15803d; }
+  .badge.buy { background: #bbf7d0; color: #166534; }
+  .badge.hold { background: #fef3c7; color: #92400e; }
+  .badge.skip { background: #fee2e2; color: #991b1b; }
+  .badge.error { background: #f3f4f6; color: #6b7280; }
+  .metrics { display: flex; gap: 1.25rem; margin-bottom: .75rem; flex-wrap: wrap; }
+  .metric { font-size: .8rem; color: #555; }
+  .metric .val { font-weight: 600; color: #1a1a2e; }
+  .metric .val.neg { color: #dc2626; }
+  .rationale { font-size: .85rem; line-height: 1.6; color: #444; border-top: 1px solid #f0f0f0; padding-top: .65rem; margin-top: .1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<a href="/watchlist" class="back-link">← Мониторинг</a>
+
+<h1>Скан просадок</h1>
+<div class="scan-meta">
+  Порог: {{ "%.0f"|format(threshold) }}% от 52w max
+  · {{ results | length }} тикер{{ 'ов' if (results | length) != 1 else '' }} ниже порога
+  · Watchlist: {{ total_watchlist }} тикер{{ 'ов' if total_watchlist != 1 else '' }}
+</div>
+
+{% if not results %}
+<div class="empty-state">
+  Все тикеры в watchlist выше порога {{ "%.0f"|format(threshold) }}% —<br>просадок не обнаружено.
+  {% if total_watchlist == 0 %}<br><br>Добавьте тикеры в <a href="/watchlist">мониторинг</a>.{% endif %}
+</div>
+{% else %}
+<div class="results-grid">
+  {% for r in results %}
+  {% set verdict_class = r.verdict | lower | replace(" ", "-") %}
+  <div class="card {{ verdict_class }}">
+    <div class="card-header">
+      <div>
+        <a href="/watchlist/{{ r.ticker }}" class="ticker-name">{{ r.ticker }}</a>
+        {% if r.name %}<div class="ticker-sub">{{ r.name }}</div>{% endif %}
+      </div>
+      <span class="badge {{ verdict_class }}">{{ r.verdict }}</span>
+    </div>
+
+    <div class="metrics">
+      <div class="metric">
+        <div>Просадка</div>
+        <div class="val neg">{{ "%.1f"|format(r.drawdown_pct) }}%</div>
+      </div>
+      {% if r.rsi_current is not none %}
+      <div class="metric">
+        <div>RSI-14</div>
+        <div class="val {{ 'neg' if r.rsi_current < 30 else '' }}">{{ "%.1f"|format(r.rsi_current) }}</div>
+      </div>
+      {% endif %}
+      {% if r.ytd_return_pct is not none %}
+      <div class="metric">
+        <div>YTD</div>
+        <div class="val {{ 'neg' if r.ytd_return_pct < 0 else '' }}">{{ "%+.1f"|format(r.ytd_return_pct) }}%</div>
+      </div>
+      {% endif %}
+      {% if r.current_price %}
+      <div class="metric">
+        <div>Цена</div>
+        <div class="val">{{ "%.2f"|format(r.current_price) }} {{ r.currency or '' }}</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="rationale">{{ r.rationale }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}
