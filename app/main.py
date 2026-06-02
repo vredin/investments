@@ -1,22 +1,20 @@
-import os
 from contextlib import asynccontextmanager
 
 import sentry_sdk
-
-_sentry_dsn = os.getenv("SENTRY_DSN")
-if _sentry_dsn:
-    sentry_sdk.init(
-        dsn=_sentry_dsn,
-        traces_sample_rate=0.1,
-        send_default_pii=False,
-        environment=os.getenv("APP_ENV", "production"),
-    )
-
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import get_settings
+
+_settings_for_sentry = get_settings()
+if _settings_for_sentry.SENTRY_DSN:
+    sentry_sdk.init(
+        dsn=_settings_for_sentry.SENTRY_DSN,
+        traces_sample_rate=0.1,
+        send_default_pii=False,
+        environment=_settings_for_sentry.APP_ENV,
+    )
 from app.routers import (
     admin,
     analyze,
