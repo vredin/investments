@@ -10,6 +10,7 @@ requires-python = ">=3.12"
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",
+    "sentry-sdk[fastapi]>=2.0",
     "sqlalchemy>=2.0",
     "psycopg2-binary>=2.9",
     "alembic>=1.13",
